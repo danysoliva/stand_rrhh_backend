@@ -1,0 +1,68 @@
+## Windows
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Windows Installer Database
+*.wixpdb
+
+# Windows Installer Logs
+*.log
+
+# Windows Installer Temporary Files
+*.cab
+*.mst
+
+# Windows Image File
+*.vhd
+*.vhdx
+
+## .NET Core
+# User-specific files
+.idea/
+.vscode/
+
+# User-specific files
+.vs2019/
+.vs2017/
+
+# .NET Core / ASP.NET Core build outputs
+bin/
+obj/
+
+# .NET Core / ASP.NET Core config files
+appsettings.json
+appsettings.*.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+
+# .NET Core publishing
+publish/
+
+# ASP.NET Core secrets storage
+secrets.json
+
+# Entity Framework Core files
+migration/
+
+# JetBrains Rider
+.idea/
+
+## Windows Installer
+*.cab
+*.msi
+*.msm
+*.msp
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# Log fi
+
+.vs/

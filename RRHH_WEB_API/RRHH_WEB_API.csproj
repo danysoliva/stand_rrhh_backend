@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="uploads\**" />
+    <Compile Remove="upload\**" />
+    <Compile Remove="_Common\Dtos\**" />
+    <Content Remove="uploads\**" />
+    <Content Remove="upload\**" />
+    <Content Remove="_Common\Dtos\**" />
+    <EmbeddedResource Remove="uploads\**" />
+    <EmbeddedResource Remove="upload\**" />
+    <EmbeddedResource Remove="_Common\Dtos\**" />
+    <None Remove="uploads\**" />
+    <None Remove="upload\**" />
+    <None Remove="_Common\Dtos\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Features\Solicitud\Dtos\ConstanciaParamsDto.cs" />
+    <Compile Remove="Features\Solicitud\Dtos\ConstanciaTrabajoDeduccionesDto.cs" />
+    <Compile Remove="Features\Solicitud\Dtos\ConstanciaTrabajoIngresosDto.cs" />
+    <Compile Remove="Features\Solicitud\Dtos\ParamsCambioEstadoSolicitud.cs" />
+    <Compile Remove="Features\Solicitud\Dtos\SolicitudContancia.cs" />
+    <Compile Remove="Features\Solicitud\Dtos\SolicitudVacacionesDto.cs" />
+    <Compile Remove="_Entidades\RequestVacaciones.cs" />
+    <Compile Remove="_Entidades\RequestVacacionesTracking.cs" />
+    <Compile Remove="_Infraestructura\Map\RequestVacacionesMap.cs" />
+    <Compile Remove="_Infraestructura\Map\RequestVacacionesTrackingMap.cs" />
+    <Compile Remove="_Infraestructura\Map\UserDelegataionMap.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.96.0" />
+    <PackageReference Include="EPPlus" Version="6.0.6" />
+    <PackageReference Include="ExcelEngine" Version="1.1.1" />
+    <PackageReference Include="JsonSubTypes" Version="1.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.27" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.17" />
+    <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1001" />
+    <PackageReference Include="Microsoft.Owin.Hosting" Version="4.2.2" />
+    <PackageReference Include="Mime-Detective" Version="22.7.21" />
+    <PackageReference Include="MimeDetective.InMemory.Ext" Version="1.0.5" />
+    <PackageReference Include="MimeKit" Version="3.4.3" />
+    <PackageReference Include="NEST" Version="7.17.4" />
+    <PackageReference Include="NETCore.MailKit" Version="2.1.0" />
+    <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.2" />
+    <PackageReference Include="Newtonsoft.Json.Schema" Version="3.0.14" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.4.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.3.1" />
+    <PackageReference Include="Syncfusion.Pdf.Net.Core" Version="20.2.0.49" />
+    <PackageReference Include="System.IO" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\formatos\" />
+    <Folder Include="wwwroot\postulantes\" />
+  </ItemGroup>
+  
+
+
+</Project>
