@@ -40,8 +40,11 @@ namespace RRHH_WEB_API
            services.AddCors();
             services.AddControllers();
 
-            services.AddDbContext<RRHH_Web_DBContext>(options =>
-              options.UseSqlServer(Configuration.GetConnectionString("DataDB")));
+            services.AddDbContext<RRHH_DBContext>(options =>
+              options.UseSqlServer(Configuration.GetConnectionString("cnxRRHH")));
+
+            services.AddDbContext<ACS_DBContext>(options =>
+             options.UseSqlServer(Configuration.GetConnectionString("cnxACS")));
 
             //var emailConfig = Configuration
             //        .GetSection("EmailConfiguration")
@@ -56,7 +59,8 @@ namespace RRHH_WEB_API
             services.AddTransient<UploadService>();
             services.AddTransient<EncuestaService>();
             services.AddTransient<EmailService>();
-            //services.AddTransient<Seguridad>();
+            services.AddTransient<EmployeePictureService>();
+            services.AddSingleton<Seguridad>();
 
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -67,8 +71,8 @@ namespace RRHH_WEB_API
                     {
                         ValidateIssuer = false,
                         ValidateAudience = false,
-                        ValidateLifetime = false,
-                        ValidateIssuerSigningKey = false,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
                         ValidIssuer = Configuration["Token:iss"],
                         ValidAudience = Configuration["Token:aud"],
                         IssuerSigningKey = new SymmetricSecurityKey(
@@ -81,12 +85,38 @@ namespace RRHH_WEB_API
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "RRHH_Web", Version = "v1" });
+
+                // Define el esquema de seguridad JWT
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[] {}
+                    }
+                });
             });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseMiddleware<ExceptionMiddleware>();
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -101,7 +131,7 @@ namespace RRHH_WEB_API
                 //app.UseExceptionHandler("/Home/Error");
                 app.UseCors(builder =>
                 {
-                    builder.WithOrigins("http://localhost:4200", "http://10.50.11.32:82")
+                    builder.WithOrigins("http://localhost:4200", "http://localhost:82", "http://10.50.11.32:82", "http://10.50.11.26:82")
                             .AllowAnyHeader()
                             .WithMethods("GET", "POST")
                             .AllowCredentials();

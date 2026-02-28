@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace RRHH_WEB_API._Entidades
 {
     public class RequestConstancia
     {
+        [Key]
         public int Id { get; set; }
         public int EmployeeId { get; set; }
         public Employee Employee { get; set; }

@@ -13,7 +13,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
         public JournalMap(EntityTypeBuilder<Journal> builder)
         {
 
-            builder.ToTable("hr_journal", "Odoo");
+            builder.ToTable("hr_journal", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.Descripcion).HasColumnName("descripcion").HasColumnType("varchar");

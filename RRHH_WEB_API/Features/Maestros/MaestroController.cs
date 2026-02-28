@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using RRHH_WEB_API._Common;
 using RRHH_WEB_API.Features.GestionesVarias.Dto;
 using RRHH_WEB_API.Features.Maestros.Dtos;
+using System.Collections.Generic;
 
 namespace RRHH_WEB_API.Features.Maestros
 {
@@ -130,6 +131,8 @@ namespace RRHH_WEB_API.Features.Maestros
             var response = _maestroService.CambiarPIN(cambiarPin.EmployeeId, cambiarPin.NuevoPin);
             return this.ActionResultFrom(response);
         }
+
+        
 
     }
 }

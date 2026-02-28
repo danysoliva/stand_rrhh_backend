@@ -12,7 +12,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
     {
         public ResourceResourceMap(EntityTypeBuilder<ResourceResource> builder)
         {
-            builder.ToTable("resource_resource", "Odoo");
+            builder.ToTable("resource_resource", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.Name).HasColumnName("name").HasColumnType("varchar");

@@ -13,9 +13,9 @@ namespace RRHH_WEB_API._Infraestructura.Map
         public PayslipLineMap(EntityTypeBuilder<PayslipLine> builder)
         {
             
-            builder.ToTable("hr_payslip_line", "Odoo");
+            builder.ToTable("hr_payslip_line", "dbo");
             builder.HasKey(x => x.Id);
-            builder.Property(x => x.Id).HasColumnName("id").HasColumnType("bigint");
+            builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.PayslipId).HasColumnName("slip_id").HasColumnType("int");
             builder.Property(x => x.SalaryRuleId).HasColumnName("salary_rule_id").HasColumnType("int");
             builder.Property(x => x.EmployeId).HasColumnName("employee_id").HasColumnType("int");

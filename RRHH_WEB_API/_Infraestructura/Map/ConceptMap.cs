@@ -12,7 +12,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
     {
         public ConceptMap(EntityTypeBuilder<Concept> builder)
         {
-            builder.ToTable("hr_concepts", "Odoo");
+            builder.ToTable("hr_concepts", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.Code).HasColumnName("code").HasColumnType("varchar");

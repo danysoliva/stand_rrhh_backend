@@ -24,7 +24,8 @@ namespace RRHH_WEB_API.Features.Email
 {
     public class EmailService
     {
-        private readonly RRHH_Web_DBContext _rrhh_Web_DBContext;
+        private readonly RRHH_DBContext _rrhh_Web_DBContext;
+        private readonly ACS_DBContext _acs_DBContext;
         private readonly DbSet<HoraEmpleadoTrabajada> _horaEmpleadoTrabajadasInstance;
         private readonly DbSet<Employee> _employeeInstance;
         private IConfiguration _configuration;
@@ -33,10 +34,11 @@ namespace RRHH_WEB_API.Features.Email
         private EmailConfiguration _emailConfiguration = new EmailConfiguration();
         private EmailSendParams _emailSendParams = new EmailSendParams();
 
-        public EmailService(RRHH_Web_DBContext rrhh_Web_DBContext,IConfiguration configuration)
+        public EmailService(RRHH_DBContext rrhh_Web_DBContext,IConfiguration configuration,ACS_DBContext acs_DBContext)
         {
             _rrhh_Web_DBContext = rrhh_Web_DBContext;
-            _horaEmpleadoTrabajadasInstance = _rrhh_Web_DBContext.HoraEmpleadoTrabajada;
+            _acs_DBContext = acs_DBContext;
+            _horaEmpleadoTrabajadasInstance = _acs_DBContext.HoraEmpleadoTrabajada;
             _employeeInstance = rrhh_Web_DBContext.Employee;
             _configuration = configuration;
 
@@ -59,8 +61,11 @@ namespace RRHH_WEB_API.Features.Email
                 var culture = new System.Globalization.CultureInfo("es-ES");
 
 
-                var test = _horaEmpleadoTrabajadasInstance.AsQueryable().AsNoTracking().Include(r=> r.Employee)
-                            .Where(h => h.EmployeeId == enviarDetalleHorasParamsDto.EmployeeId && h.FechaI >= Convert.ToDateTime(enviarDetalleHorasParamsDto.FechaInicio).Date).ToList();
+                //var test = _horaEmpleadoTrabajadasInstance.AsQueryable().AsNoTracking().Include(r=> r.Employee)
+                //            .Where(h => h.EmployeeId == enviarDetalleHorasParamsDto.EmployeeId && h.FechaI >= Convert.ToDateTime(enviarDetalleHorasParamsDto.FechaInicio).Date).ToList();
+
+
+                var empleado = _employeeInstance.FirstOrDefault(d => d.Id == enviarDetalleHorasParamsDto.EmployeeId);
 
                 var detalleHoras = _horaEmpleadoTrabajadasInstance.AsQueryable()
                                   .AsNoTracking().Include(r=> r.Employee).Where(h => h.EmployeeId == enviarDetalleHorasParamsDto.EmployeeId
@@ -71,9 +76,11 @@ namespace RRHH_WEB_API.Features.Email
                    .Select(r => new HoraEmpleadoCorreoDto
                    {
                        Serial = r.Id.ToString(),
-                       Code = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == enviarDetalleHorasParamsDto.EmployeeId).BarCode,
-                       EmpleadoId = (int)r.EmployeeId,
-                       EmployeeName = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r=> r.Id==enviarDetalleHorasParamsDto.EmployeeId).Name,
+                       //Code = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == enviarDetalleHorasParamsDto.EmployeeId).BarCode, //Codigo Anterior
+                       Code = empleado.BarCode,
+                       EmpleadoId = enviarDetalleHorasParamsDto.EmployeeId,
+                       //EmployeeName = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r=> r.Id==enviarDetalleHorasParamsDto.EmployeeId).Name,//Codigo Anterior
+                       EmployeeName = empleado.Name,
                        NormalHour = r.Cantidad,
                        ExtraHours = r.CantidadDe,
                        FechaI = (DateTime)r.FechaI,
@@ -82,11 +89,7 @@ namespace RRHH_WEB_API.Features.Email
                        Semana = (int)r.Week
                    }).ToList();
 
-
-                //var data = ToDataTable(detalleHoras.Select(r=> new { r.Serial,r.Code,r.EmpleadoId,r.EmployeeName,r.NormalHour,r.ExtraHours,r.Fecha,r.FechaI,r.FechaF,r.Semana }).ToList());
-
-                //var dh = detalleHoras.Select(r => new { r.Serial, r.Code, r.EmpleadoId, r.EmployeeName, r.NormalHour, r.ExtraHours, r.Fecha, r.FechaI, r.FechaF, r.Semana }).ToList();
-
+                 
                 var data = ToDataTable(detalleHoras);
 
                 var mail = _employeeInstance.FirstOrDefault(r => r.Id == enviarDetalleHorasParamsDto.EmployeeId).WorkEmail;
@@ -203,6 +206,7 @@ namespace RRHH_WEB_API.Features.Email
                 message.To.Add(item);
             }
             //message.To.Add("reuceda05@hotmail.com");
+
             message.Subject = emailSendParams.Subject;
             message.Body = emailSendParams.Body;
             //message.Body = "<p>Estimado(a) " + nombre + ", reciba un cordial saludo,</p> <p>Se adjunta el archivo de horas trabajas que usted solicitó</p> ";
@@ -211,7 +215,7 @@ namespace RRHH_WEB_API.Features.Email
             smtp.EnableSsl = true;
             smtp.Port = _emailConfiguration.Port;
             smtp.Host = _emailConfiguration.SmtpServer;
-            smtp.UseDefaultCredentials = true;
+            //smtp.UseDefaultCredentials = true;
             smtp.Credentials = new NetworkCredential(_emailConfiguration.UserName, _emailConfiguration.Password);
             smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
 

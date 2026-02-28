@@ -17,7 +17,9 @@ namespace RRHH_WEB_API.Features.Encuestas
     public class EncuestaService
     {
         private readonly IConfiguration _configuration;
-        private readonly RRHH_Web_DBContext rrhh_Web_DBContext;
+        private readonly RRHH_DBContext rrhh_Web_DBContext;
+        private readonly ACS_DBContext _acs_DBContext;
+
         private readonly DbSet<EncuestaH> _encuestaInstance;
         private readonly DbSet<EncuestaPregunta> _encuestaPreguntaInstance;
         private readonly DbSet<EncuestaOpcion> _encuestaOpcionInstance;
@@ -26,15 +28,17 @@ namespace RRHH_WEB_API.Features.Encuestas
 
 
 
-        public EncuestaService(RRHH_Web_DBContext rrhh_DBContext, IConfiguration configuration)
+        public EncuestaService(RRHH_DBContext rrhh_DBContext, IConfiguration configuration, ACS_DBContext acs_DBContext)
         {
             _configuration = configuration;
             rrhh_Web_DBContext = rrhh_DBContext;
-            _encuestaInstance = rrhh_DBContext.Encuesta;
-            _encuestaPreguntaInstance = rrhh_DBContext.EncuestaPreguntas;
-            _encuestaOpcionInstance = rrhh_DBContext.EncuestaOpciones;
-            _encuestaRespuestaInstance = rrhh_DBContext.EncuestaRespuestas;
-            _encuestaEstado = rrhh_DBContext.EncuestaEstado;
+            _acs_DBContext = acs_DBContext;
+
+            _encuestaInstance = _acs_DBContext.Encuesta;
+            _encuestaPreguntaInstance = _acs_DBContext.EncuestaPreguntas;
+            _encuestaOpcionInstance = _acs_DBContext.EncuestaOpciones;
+            _encuestaRespuestaInstance = _acs_DBContext.EncuestaRespuestas;
+            _encuestaEstado = _acs_DBContext.EncuestaEstado;
 
         }
 
@@ -46,7 +50,7 @@ namespace RRHH_WEB_API.Features.Encuestas
                 EncuestaPregunta pregunta = new EncuestaPregunta();
                 EncuestaOpcion opcion = new EncuestaOpcion();
 
-                rrhh_Web_DBContext.Database.BeginTransaction();
+                _acs_DBContext.Database.BeginTransaction();
 
                 encuestaSave.Titulo = encuesta.Titulo.ToUpper();
                 encuestaSave.FechaCreacion = DateTime.Now;
@@ -54,7 +58,7 @@ namespace RRHH_WEB_API.Features.Encuestas
                 encuestaSave.Enable = true;
 
                 _encuestaInstance.Add(encuestaSave);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 foreach (var item in encuesta.Preguntas)
                 {
@@ -65,7 +69,7 @@ namespace RRHH_WEB_API.Features.Encuestas
                     pregunta.Enable = true;
 
                     _encuestaPreguntaInstance.Add(pregunta);
-                    rrhh_Web_DBContext.SaveChanges();
+                    _acs_DBContext.SaveChanges();
 
                     foreach (var elementos in item.Opciones)
                     {
@@ -77,12 +81,12 @@ namespace RRHH_WEB_API.Features.Encuestas
                         opcion.Enable = true;
 
                         _encuestaOpcionInstance.Add(opcion);
-                        rrhh_Web_DBContext.SaveChanges();
+                        _acs_DBContext.SaveChanges();
 
                     }
                 }
 
-                rrhh_Web_DBContext.Database.CommitTransaction();
+                _acs_DBContext.Database.CommitTransaction();
 
                 return Response<bool>.Success(false);
 
@@ -176,7 +180,7 @@ namespace RRHH_WEB_API.Features.Encuestas
                     respuesta.EmployeeId = employeeId;
 
                     _encuestaRespuestaInstance.Add(respuesta);
-                rrhh_Web_DBContext.SaveChanges();
+                    _acs_DBContext.SaveChanges();
                     
                 }
 

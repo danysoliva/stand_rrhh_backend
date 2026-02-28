@@ -1,8 +1,11 @@
-﻿namespace RRHH_WEB_API._Entidades
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace RRHH_WEB_API._Entidades
 {
     public class UserDelegation
     {
-        public int? EmployeeId { get; set; }
+        [Key]
+        public int EmployeeId { get; set; }
         public Employee Employee { get; set; }
         public int UserLevelId { get; set; }
         public UserLevel UserLevel { get; set; }

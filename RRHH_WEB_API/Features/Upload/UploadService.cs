@@ -16,20 +16,21 @@ namespace RRHH_WEB_API.Features.Upload
     public class UploadService
     {
         private readonly IWebHostEnvironment _enviroment;
-        private readonly RRHH_Web_DBContext _rrhh_DBContext;
+        private readonly ACS_DBContext _acs_DBContext;
+
         private readonly DbSet<RepositoryImage> _repositoryImage;
         private readonly DbSet<RepositoryDocument> _repositoryDocumento;
         private readonly DbSet<ParametrosGenerales> _parametrosGenerales;
         private readonly DbSet<RepositoryGroup> _repositoryGroupInstance;
 
-        public UploadService(RRHH_Web_DBContext rrhh_DBContext, IWebHostEnvironment environment)
+        public UploadService(ACS_DBContext acs_DBContext, IWebHostEnvironment environment)
         {
             _enviroment = environment;
-            _rrhh_DBContext = rrhh_DBContext;
-            _repositoryImage = rrhh_DBContext.RepositoryImage;
-            _repositoryDocumento = rrhh_DBContext.RepositoryDocument;
-            _parametrosGenerales = rrhh_DBContext.ParametrosGenerales;
-            _repositoryGroupInstance = rrhh_DBContext.RepositoryGroups;
+            _acs_DBContext = acs_DBContext;
+            _repositoryImage = _acs_DBContext.RepositoryImage;
+            _repositoryDocumento = _acs_DBContext.RepositoryDocument;
+            _parametrosGenerales = _acs_DBContext.ParametrosGenerales;
+            _repositoryGroupInstance = _acs_DBContext.RepositoryGroups;
         }
 
         public Response<bool> SaveFiles(List<IFormFile> archivos,string host)
@@ -67,7 +68,7 @@ namespace RRHH_WEB_API.Features.Upload
                         };
 
                         _repositoryImage.Add(image);
-                        _rrhh_DBContext.SaveChanges();
+                        _acs_DBContext.SaveChanges();
                     }
                 }
                 return Response<bool>.Success(true);
@@ -83,7 +84,7 @@ namespace RRHH_WEB_API.Features.Upload
                 };
 
                 _repositoryImage.Add(image);
-                _rrhh_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 return Response<bool>.Excepcion("Ocurrió un error al subir el archivo: " + ex.Message);
             }
@@ -147,7 +148,7 @@ namespace RRHH_WEB_API.Features.Upload
 
                 _repositoryImage.Update(imagen);
 
-                _rrhh_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
 
                 var imagenes = _repositoryImage.AsQueryable().AsNoTracking()
@@ -183,7 +184,7 @@ namespace RRHH_WEB_API.Features.Upload
 
                 _parametrosGenerales.Update(parametro);
 
-                _rrhh_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
 
 
@@ -232,7 +233,7 @@ namespace RRHH_WEB_API.Features.Upload
                         };
 
                        _repositoryDocumento.Add(image);
-                        _rrhh_DBContext.SaveChanges();
+                        _acs_DBContext.SaveChanges();
                     }
                 }
                 return Response<bool>.Success(true);
@@ -248,7 +249,7 @@ namespace RRHH_WEB_API.Features.Upload
                 };
 
                 _repositoryImage.Add(image);
-                _rrhh_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 return Response<bool>.Excepcion("Ocurrió un error al subir el archivo: " + ex.Message);
             }
@@ -265,7 +266,7 @@ namespace RRHH_WEB_API.Features.Upload
                 repositorio.GrupoID = id_grupo;
 
                 _repositoryDocumento.Update(repositorio);
-                _rrhh_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
 
                return ObtenerDocumentosPorTipo((int)TipoDocumentoEnum.Formatos);
@@ -285,59 +286,44 @@ namespace RRHH_WEB_API.Features.Upload
 
                 string sql = $"EXEC rrhh_web.usp_GetDocumentosRepositorioFiltradoPorTipo  {tipo}";
 
-                var f = _rrhh_DBContext.RepositoryDocument
+                var documentos = _acs_DBContext.RepositoryDocument.FromSqlRaw(sql).ToList();
 
-                .FromSqlRaw(sql).ToList();
+                var grupos = _repositoryGroupInstance.AsQueryable().AsNoTracking().ToList();
 
-                //var documentos = _rrhh_DBContext.RepositoryDocument
-
-                //.FromSqlRaw(sql).ToList().Select(p => new RepositorioDocumentoDto
-                //{
-                //    Id = p.Id,
-                //    FileName = p.FileName,
-                //    Path = p.Path,
-                //    Host = p.Host,
-                //    ReferenceFileName = p.ReferenceFileName,
-                //    FullPath = p.Host + p.Path,
-                //    GrupoId = p.GrupoID,
-                //    //Descripcion = p.RepositoryGroup.Descripcion
-                //}).ToList();
-
+                var documentosFinales= documentos
+                    .Select(f=> new RepositorioDocumentoDto
+                                {
+                                    Id = f.Id,
+                                    FileName = f.FileName,
+                                    Path = f.Path,
+                                    Host = f.Host,
+                                    ReferenceFileName = f.ReferenceFileName,
+                                    FullPath = f.Host + f.Path,
+                                    GrupoId = Convert.ToInt32(f.GrupoID == null ? 0 : f.GrupoID),
+                                    GrupoDocumento = grupos.FirstOrDefault(m => m.Id == f.GrupoID).Descripcion == null ? "No Definido" : grupos.FirstOrDefault(m => m.Id == f.GrupoID).Descripcion
+                    }).ToList();
 
 
-                var documentos = (from doctos in _repositoryDocumento
-                                  join grupos in _repositoryGroupInstance on doctos.GrupoID equals grupos.Id into DoctosGrupos
-                                  from doctos_grupos in DoctosGrupos.DefaultIfEmpty()
-                                  where doctos.Enabled == true && doctos.Tipo == tipo
-                                  //orderby score descending
-                                  select new RepositorioDocumentoDto
-                                  {
-                                      Id = doctos.Id,
-                                      FileName = doctos.FileName,
-                                      Path = doctos.Path,
-                                      Host = doctos.Host,
-                                      ReferenceFileName = doctos.ReferenceFileName,
-                                      FullPath = doctos.Host + doctos.Path,
-                                      GrupoId = Convert.ToInt32(doctos.GrupoID == null ? 0 : doctos.GrupoID),
-                                      GrupoDocumento = doctos_grupos.Descripcion == null ? "No Definido": doctos_grupos.Descripcion
-                                  }).ToList();
+                //var documentos = (from doctos in _repositoryDocumento
+                //                  join grupos in _repositoryGroupInstance on doctos.GrupoID equals grupos.Id into DoctosGrupos
+                //                  from doctos_grupos in DoctosGrupos.DefaultIfEmpty()
+                //                  where doctos.Enabled == true && doctos.Tipo == tipo
+                //                  //orderby score descending
+                //                  select new RepositorioDocumentoDto
+                //                  {
+                //                      Id = doctos.Id,
+                //                      FileName = doctos.FileName,
+                //                      Path = doctos.Path,
+                //                      Host = doctos.Host,
+                //                      ReferenceFileName = doctos.ReferenceFileName,
+                //                      FullPath = doctos.Host + doctos.Path,
+                //                      GrupoId = Convert.ToInt32(doctos.GrupoID == null ? 0 : doctos.GrupoID),
+                //                      GrupoDocumento = doctos_grupos.Descripcion == null ? "No Definido": doctos_grupos.Descripcion
+                //                  }).ToList();
 
 
-                //var documentos = _repositoryDocumento.AsQueryable().AsNoTracking()
-                //                .Where(f => f.Enabled == true && f.Tipo == tipo)
-                //                .Select(p => new RepositorioDocumentoDto
-                //                {
-                //                    Id = p.Id,
-                //                    FileName = p.FileName,
-                //                    Path = p.Path,
-                //                    Host = p.Host,
-                //                    ReferenceFileName = p.ReferenceFileName,
-                //                    FullPath = p.Host + p.Path,
-                //                    GrupoId = p.GrupoID,
-                //                    GrupoDocumento = p.RepositoryGroup.Descripcion
-                //                }).ToList();
 
-                return Response<List<RepositorioDocumentoDto>>.Success(documentos);
+                return Response<List<RepositorioDocumentoDto>>.Success(documentosFinales);
             }
             catch (Exception ex)
             {
@@ -356,7 +342,7 @@ namespace RRHH_WEB_API.Features.Upload
 
                 _repositoryDocumento.Update(documento);
 
-                _rrhh_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 var documentos = ObtenerDocumentosPorTipo(tipo).Data;
 
@@ -402,12 +388,17 @@ namespace RRHH_WEB_API.Features.Upload
 
                         RepositoryGroup grupoInserted = new RepositoryGroup();
 
+
+                        if (!string.IsNullOrEmpty(grupo.Descripcion))
+                        {
+
                         grupoInserted.Id = 0;
                         grupoInserted.Descripcion = grupo.Descripcion;
                         grupoInserted.Enable = true;
 
                         _repositoryGroupInstance.Add(grupoInserted);
-                        _rrhh_DBContext.SaveChanges();
+                        _acs_DBContext.SaveChanges();
+                        }
                         break;
 
                     case 2:
@@ -418,7 +409,7 @@ namespace RRHH_WEB_API.Features.Upload
 
                         _repositoryGroupInstance.Update(group);
 
-                        _rrhh_DBContext.SaveChanges();
+                        _acs_DBContext.SaveChanges();
                         break;
 
                     case 3:
@@ -428,7 +419,7 @@ namespace RRHH_WEB_API.Features.Upload
 
                         _repositoryGroupInstance.Update(group2);
 
-                        _rrhh_DBContext.SaveChanges();
+                        _acs_DBContext.SaveChanges();
                         break;
                 }
 

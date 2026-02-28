@@ -9,7 +9,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
         public LeaveMap(EntityTypeBuilder<Leave> builder)
         {
 
-            builder.ToTable("hr_leave", "Odoo");
+            builder.ToTable("hr_leave", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.State).HasColumnName("state").HasColumnType("varchar");
@@ -17,7 +17,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
             builder.Property(x => x.DepartmentId).HasColumnName("department_id").HasColumnType("int");
             builder.Property(x => x.DateFrom).HasColumnName("date_from").HasColumnType("datetime");
             builder.Property(x => x.DateTo).HasColumnName("date_to").HasColumnType("datetime");
-            builder.Property(x => x.NumberOfDays).HasColumnName("number_of_days").HasColumnType("decimal");
+            builder.Property(x => x.NumberOfDays).HasColumnName("number_of_days").HasColumnType("float");
             builder.Property(x => x.HolidayStatusId).HasColumnName("holiday_status_id").HasColumnType("int");
             builder.Property(x => x.CreateDate).HasColumnName("create_date").HasColumnType("datetime");
 

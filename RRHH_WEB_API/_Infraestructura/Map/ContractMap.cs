@@ -8,7 +8,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
     {
         public ContractMap(EntityTypeBuilder<Contract> builder)
         {
-            builder.ToTable("hr_contract", "Odoo");
+            builder.ToTable("hr_contrato", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.Name).HasColumnName("name").HasColumnType("varchar");

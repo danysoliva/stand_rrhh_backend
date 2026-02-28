@@ -8,7 +8,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
     {
         public JobMap(EntityTypeBuilder<Job> builder)
         {
-            builder.ToTable("hr_job", "Odoo");
+            builder.ToTable("hr_job", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.Name).HasColumnName("name").HasColumnType("varchar");

@@ -8,7 +8,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
     {
         public DepartmentMap(EntityTypeBuilder<Department> builder)
         {
-            builder.ToTable("hr_department", "Odoo");
+            builder.ToTable("hr_departament", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.Name).HasColumnName("name").HasColumnType("varchar");

@@ -8,9 +8,9 @@ namespace RRHH_WEB_API._Entidades
     public class AutorizacionDeduccionPlanillaEstado
     {
         public int Id { get; set; }
-        public string Descripcion { get; set; }
-        public bool Enable { get; set; }
+        public string? Descripcion { get; set; }
+        public bool? Enable { get; set; }
 
-        public List<AutorizacionDeduccionPlanilla> DeduccionesPorPlanilla { get; set; }
+        //public List<AutorizacionDeduccionPlanilla> DeduccionesPorPlanilla { get; set; }
     }
 }

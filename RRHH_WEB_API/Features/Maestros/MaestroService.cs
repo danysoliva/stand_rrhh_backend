@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using RRHH_WEB_API._Common;
 using RRHH_WEB_API._Entidades;
 using RRHH_WEB_API._Infraestructura;
@@ -14,8 +15,10 @@ namespace RRHH_WEB_API.Features.Maestros
 {
     public class MaestroService
     {
-        private readonly RRHH_Web_DBContext rrhh_Web_DBContext;
+        private readonly RRHH_DBContext rrhh_Web_DBContext;
+        private readonly ACS_DBContext _acs_DBContext;
         private readonly EmailService _emailService;
+        private readonly Seguridad _seguridad;
 
         private readonly DbSet<Employee> _employeeInstance;
         private readonly DbSet<UserDelegation> _userDelegationInstance;
@@ -45,30 +48,32 @@ namespace RRHH_WEB_API.Features.Maestros
             { "AdditionalCardPersonAdressType", /* rest of elements */ };
 
       
-        public MaestroService(RRHH_Web_DBContext rrhh_DBContext, EmailService mailService)
+        public MaestroService(RRHH_DBContext rrhh_DBContext, ACS_DBContext acs_DBContext,EmailService mailService, Seguridad seguridad)
         {
-            rrhh_Web_DBContext = rrhh_DBContext;
+             rrhh_Web_DBContext = rrhh_DBContext;
+            _acs_DBContext = acs_DBContext;
             _emailService = mailService;
+            _seguridad = seguridad;
 
             _employeeInstance = rrhh_DBContext.Employee;
-            _userDelegationInstance = rrhh_DBContext.UserDelegation;
-            _userLevelInstance = rrhh_DBContext.UserLevel;
-            _requestConstancialInstance = rrhh_DBContext.RequestConstancia;
-            _requestTypelInstance = rrhh_DBContext.RequestType;
-            _requestStatelInstance = rrhh_DBContext.RequestState;
-            _requestVacacionInstance = rrhh_DBContext.RequestVacacion;
-            _requestVacacionTrackingInstance = rrhh_DBContext.RequestVacacionTracking;
+            _userDelegationInstance = acs_DBContext.UserDelegation;
+            _userLevelInstance = acs_DBContext.UserLevel;
+            _requestConstancialInstance = acs_DBContext.RequestConstancia;
+            _requestTypelInstance = acs_DBContext.RequestType;
+            _requestStatelInstance = acs_DBContext.RequestState;
+            _requestVacacionInstance = acs_DBContext.RequestVacacion;
+            _requestVacacionTrackingInstance = acs_DBContext.RequestVacacionTracking;
             _requestContractInstance = rrhh_DBContext.Contract;
             _journalInstance = rrhh_DBContext.Journal;
             _payslipRunInstance = rrhh_DBContext.PayslipRun;
             _payslipLineInstance = rrhh_DBContext.PayslipLine;
             _paysLipInstance = rrhh_DBContext.Payslip;
-            _repositoryImageInstance = rrhh_DBContext.RepositoryImage;
-            _horasEmpleadosRolesDepartamentosInstance = rrhh_DBContext.HorasEmpleadosRolesDepartamento;
-            _horaEmpleadoTrabajadasInstance = rrhh_DBContext.HoraEmpleadoTrabajada;
-            _horaEmpleadoNombresInstance = rrhh_DBContext.HoraEmpleadoNombre;
+            _repositoryImageInstance = acs_DBContext.RepositoryImage;
+            _horasEmpleadosRolesDepartamentosInstance = acs_DBContext.HorasEmpleadosRolesDepartamento;
+            _horaEmpleadoTrabajadasInstance = acs_DBContext.HoraEmpleadoTrabajada;
+            _horaEmpleadoNombresInstance = acs_DBContext.HoraEmpleadoNombre;
             _benefitDeductionInstance = rrhh_Web_DBContext.BenefitDeduction;
-            _repositoryGroupInstance = rrhh_Web_DBContext.RepositoryGroups;
+            _repositoryGroupInstance = acs_DBContext.RepositoryGroups;
 
 
             ordenDetalle.Add(new OrdenVoucherHorasExtras {Orden=1,Code= "BASE_EX",CodeRelated= "BASE_EX" });
@@ -127,36 +132,37 @@ namespace RRHH_WEB_API.Features.Maestros
                     MobilePhone = x.MobilePhone ?? "No encontrado",
                     WorkEmail = x.WorkEmail ?? "No encontrado",
                     JobName = x.Job.Name ?? "No encontrado",
-                    Gender = (x.Gender == null) ? "No encontrado" : (x.Gender == "male") ? "Masculino" : "Femenino",
+                    //Gender = (x.Gender == null) ? "No encontrado" : (x.Gender == "male") ? "Masculino" : "Femenino",//Antiguo
+                    Gender = x.Gender == null ? "No encontrado" : x.Gender,//Codigo Nuevo
                     Birthday = (x.BirthDay == null) ? "No encontrado" : x.BirthDay.Value.ToString("dd 'de' MMMM 'del' yyyy", new CultureInfo("es-ES")),
                     //PictureProfile = ConvertToBase64(x.Image)
                 }).FirstOrDefault();
 
-                var employeeProfilePicture = _employeeInstance.AsQueryable().AsNoTracking()
-                .FirstOrDefault(y => y.Id == id).Image;
+                //var employeeProfilePicture = _employeeInstance.AsQueryable().AsNoTracking()
+                //.FirstOrDefault(y => y.Id == id).Image;
 
-                    var base64= ConvertToBase64(employeeProfilePicture);
+                    //var base64= ConvertToBase64(employeeProfilePicture);
 
-                var firstCharacter = base64.Substring(0,1);
+                //var firstCharacter = base64.Substring(0,1);
 
-                string metadata="";
+                //string metadata="";
 
-                if (firstCharacter== "/")
-                {
-                    metadata = $"data:image/jpg;base64,";
-                }
+                //if (firstCharacter== "/")
+                //{
+                //    metadata = $"data:image/jpg;base64,";
+                //}
 
-                if (firstCharacter == "i")
-                {
-                    metadata = $"data:image/png;base64,";
-                }
+                //if (firstCharacter == "i")
+                //{
+                //    metadata = $"data:image/png;base64,";
+                //}
 
-                if (firstCharacter == "R")
-                {
-                    metadata = $"data:image/gif;base64,";
-                }
+                //if (firstCharacter == "R")
+                //{
+                //    metadata = $"data:image/gif;base64,";
+                //}
 
-                empleado.PictureProfile = metadata + base64;
+                //empleado.PictureProfile = metadata + base64;
 
 
                 return Response<PerfilEmpleadoDto>.Success(empleado);
@@ -184,6 +190,8 @@ namespace RRHH_WEB_API.Features.Maestros
 
                 var payRollType = _payslipRunInstance.AsQueryable().AsNoTracking().FirstOrDefault(p => p.Id == paysliprunid).PayRollTypeId;
 
+                var empleado = _employeeInstance.FirstOrDefault(e => e.Id == employeeId);
+
 
                 if (payRollType==3) //Horas Extras
                 {
@@ -192,14 +200,15 @@ namespace RRHH_WEB_API.Features.Maestros
                             {
                                 PayslipName = p.Name,
                                 State = p.State,
-                                EmployeeId = p.Payslip.EmployeeId,
+                                //EmployeeId = p.Payslip.EmployeeId,//Codigo Anterior
+                                EmployeeId = employeeId,
                                 EmployeeName = p.Payslip.Employee.Name,
                                 Identificacion = p.Payslip.Employee.IdentificationId,
                                 EmployeeDepartment = p.Payslip.Employee.Department.Name,
                                 EmployeeJobName = p.Payslip.Employee.Job.Name,
                                 EmployeeJournal = p.Payslip.Employee.Journal.Descripcion,
                                 BarCode = p.Payslip.Employee.BarCode,
-                                FechaPago = p.DateStart.ToShortDateString() + " al " + p.DateEnd.ToShortDateString(),
+                                FechaPago = p.DateStart.ToString("dd/MM/yyyy") + " al " + p.DateEnd.ToString("dd/MM/yyyy"),
                                 Moneda = p.CurrencId == 2 ? "USD" : "L",
                                 DateStart = p.DateStart,
                                 DateEnd = p.DateEnd,
@@ -217,9 +226,13 @@ namespace RRHH_WEB_API.Features.Maestros
 
 
                     List<VoucherDto> vouchersporempleado = _paysLipInstance.AsQueryable().AsNoTracking()
-                        .Where(f => f.PayslipRunId == paysliprunid && f.EmployeeId == employeeId  && !categoriesId.Contains(f.PayslipLine.CategoryId))
-                        //.Where(f => f.PayslipRunId == paysliprunid && f.EmployeeId == employeeId && f.PayslipLine.SalaryRuleId != 2 && !categoriesId.Contains(f.PayslipLine.CategoryId))
-
+                        //.Where(f => f.PayslipRunId == paysliprunid && f.EmployeeId == employeeId  && !categoriesId.Contains(f.PayslipLine.CategoryId))
+                        .Where(f =>
+                            f.PayslipRunId == paysliprunid &&
+                            f.EmployeeId == employeeId &&
+                            (!f.PayslipLine.CategoryId.HasValue ||
+                             !categoriesId.Contains(f.PayslipLine.CategoryId.Value))
+                        )
                         .Select(x => new VoucherDto
                         {
                             Id = x.Id,
@@ -232,19 +245,20 @@ namespace RRHH_WEB_API.Features.Maestros
                             EmployeeJobName = x.Employee.Job.Name,
                             EmployeeJournal = x.Employee.Journal.Descripcion,
                             BarCode = x.Employee.BarCode,
-                        //Code = x.PayslipLine.Code,
-                        DateStart = x.PayslipRun.DateStart,
+                            DateStart = x.PayslipRun.DateStart,
                             DateEnd = x.PayslipRun.DateEnd,
                             Moneda = x.PayslipRun.CurrencId == 2 ? "USD" : "L"
                         }).ToList();
 
 
-
-
-
                     var detalleSalario = _payslipLineInstance.AsQueryable().AsNoTracking()
-                    //.Where(f => f.Payslip.PayslipRunId == paysliprunid && f.EmployeId == employeeId && f.SalaryRuleId != 2 && !categoriesId.Contains(f.CategoryId))
-                    .Where(f => f.Payslip.PayslipRunId == paysliprunid && f.EmployeId == employeeId  && !categoriesId.Contains(f.CategoryId))
+                        .Where(f =>
+                            f.Payslip.PayslipRunId == paysliprunid &&
+                            f.Payslip.EmployeeId == employeeId &&
+                            (!f.Payslip.PayslipLine.CategoryId.HasValue ||
+                             !categoriesId.Contains(f.Payslip.PayslipLine.CategoryId.Value))
+                        )
+                    //.Where(f => f.Payslip.PayslipRunId == paysliprunid && f.EmployeId == employeeId  && !categoriesId.Contains(f.CategoryId))
                     .ToList();
 
 
@@ -261,7 +275,7 @@ namespace RRHH_WEB_API.Features.Maestros
                     EmployeeJournal = vouchersporempleado.FirstOrDefault().EmployeeJournal,
                     DateStart = vouchersporempleado.FirstOrDefault().DateStart,
                     DateEnd = vouchersporempleado.FirstOrDefault().DateEnd,
-                    FechaPago = vouchersporempleado.FirstOrDefault().DateStart.ToShortDateString() + " al " + vouchersporempleado.FirstOrDefault().DateEnd.ToShortDateString(),
+                    FechaPago = vouchersporempleado.FirstOrDefault().DateStart.ToString("dd/MM/yyyy") + " al " + vouchersporempleado.FirstOrDefault().DateEnd.ToString("dd/MM/yyyy"),
                     BarCode = vouchersporempleado.FirstOrDefault().BarCode,
                     Moneda = vouchersporempleado.FirstOrDefault().Moneda,
 
@@ -297,7 +311,7 @@ namespace RRHH_WEB_API.Features.Maestros
                     List<string> codeBeneficios = new List<string> { "DVAC", "DFT", "DLB","PVAC", "BON", "BASIC" };
 
                   
-                    string sql = $"EXEC dbo.uspGetBenefitsFromVoucher  { employeeId}, { paysliprunid}";
+                    string sql = $"EXEC dbo.uspGetBenefitsFromVoucherV3  { employeeId}, { paysliprunid}";
 
                     var beneficios = rrhh_Web_DBContext.BeneficioVoucher
                     .FromSqlRaw(sql).ToList().Select(x => new VoucherBeneficioPlanillaDto
@@ -311,7 +325,7 @@ namespace RRHH_WEB_API.Features.Maestros
 
 
 
-                    string sql2 = $"EXEC dbo.uspGetDeductionFromVoucher  { employeeId}, { paysliprunid}";
+                    string sql2 = $"EXEC dbo.uspGetDeductionFromVoucherV3  { employeeId}, { paysliprunid}";
 
                     var deducciones = rrhh_Web_DBContext.DeduccionesVoucher
                     .FromSqlRaw(sql2).ToList().Select(x => new VoucherDeduccionPlanillaDto
@@ -421,7 +435,7 @@ namespace RRHH_WEB_API.Features.Maestros
 
 
                 var idAExcluir = new List<int>{ 8, 9 };
-                var stateAExcluir = new List<string>{ "anulated", "draft" };
+                var stateAExcluir = new List<string>{ "anulated", "draft", "Cancelada" };
 
                 var lastDate = _payslipRunInstance.AsQueryable().AsNoTracking().OrderByDescending(t => t.CreateDate).First().CreateDate.AddMonths(-6).Date;
 
@@ -453,26 +467,53 @@ namespace RRHH_WEB_API.Features.Maestros
 
                 var culture = new System.Globalization.CultureInfo("es-ES");
 
-                var detalleHoras = _horaEmpleadoTrabajadasInstance.AsQueryable().Include(f=>f.Employee)
-                                    .AsNoTracking().Where(h => h.EmployeeId == horasEmpleado.EmployeeId
-                                    && h.FechaI >= Convert.ToDateTime(horasEmpleado.FechaInicio)
-                                    && h.FechaI <= Convert.ToDateTime(horasEmpleado.FechaFin)
-                                    && h.Enable == true
-                                    )
-                     .Select(r => new HoraEmpleadoDto
-                     {
-                         Serial = r.Id.ToString(),
-                         Code = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r=> r.Id==horasEmpleado.EmployeeId).BarCode,
-                         EmpleadoId=(int)r.EmployeeId,
-                         EmployeeName = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == horasEmpleado.EmployeeId).Name,
-                         NormalHour=r.Cantidad,
-                         ExtraHours = r.CantidadDe,
-                         FechaI = (DateTime)r.FechaI,
-                         FechaF = (DateTime)r.FechaF.GetValueOrDefault(),
-                         Fecha = culture.DateTimeFormat.GetDayName(r.Fecha.DayOfWeek) + ", " + r.Fecha.ToString("dd/MM/yyyy"),
-                         Departamento = r.Employee.HoraEmpleadoDepartamento.Name,
-                         Semana = (int)r.Week
-                     }).ToList();
+                //var detalleHoras = _horaEmpleadoTrabajadasInstance.AsQueryable().Include(f=>f.Employee)
+                //                    .AsNoTracking().Where(h => h.EmployeeId == horasEmpleado.EmployeeId
+                //                    && h.FechaI >= Convert.ToDateTime(horasEmpleado.FechaInicio)
+                //                    && h.FechaI <= Convert.ToDateTime(horasEmpleado.FechaFin)
+                //                    && h.Enable == true
+                //                    )
+                //     .Select(r => new HoraEmpleadoDto
+                //     {
+                //         Serial = r.Id.ToString(),
+                //         Code = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r=> r.Id==horasEmpleado.EmployeeId).BarCode,
+                //         EmpleadoId=(int)r.EmployeeId,
+                //         EmployeeName = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == horasEmpleado.EmployeeId).Name,
+                //         NormalHour=r.Cantidad,
+                //         ExtraHours = r.CantidadDe,
+                //         FechaI = (DateTime)r.FechaI,
+                //         FechaF = (DateTime)r.FechaF.GetValueOrDefault(),
+                //         Fecha = culture.DateTimeFormat.GetDayName(r.Fecha.DayOfWeek) + ", " + r.Fecha.ToString("dd/MM/yyyy"),
+                //         Departamento = r.Employee.HoraEmpleadoDepartamento.Name,
+                //         Semana = (int)r.Week
+                //     }).ToList();
+
+
+               var activoParam = new SqlParameter("@employee_id", horasEmpleado.EmployeeId);
+               var fechaIParam = new SqlParameter("@fechaI", horasEmpleado.FechaInicio);
+               var fechaFParam = new SqlParameter("@fechaF", horasEmpleado.FechaFin);
+
+                var horas_trabajadas = _acs_DBContext.HorasTrabajadasEmpleados
+                    .FromSqlRaw(
+                        "EXEC usp_horas_empleado_trabajadas_Listar @employee_id,@fechaI,@fechaF",
+                        activoParam,fechaIParam,fechaFParam)
+                    .ToList();
+
+                var detalleHoras = horas_trabajadas.AsQueryable()
+                         .Select(r => new HoraEmpleadoDto
+                         {
+                             Serial = r.Serial.ToString(),
+                             Code = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == horasEmpleado.EmployeeId).BarCode,
+                             EmpleadoId = (int)r.EmpleadoId,
+                             EmployeeName = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == horasEmpleado.EmployeeId).Name,
+                             NormalHour = r.NormalHour,
+                             ExtraHours = r.ExtraHours,
+                             FechaI =  r.FechaI,
+                             FechaF =  r.FechaF,
+                             Fecha = culture.DateTimeFormat.GetDayName(r.Fecha.DayOfWeek) + ", " + r.Fecha.ToString("dd/MM/yyyy"),
+                             Departamento = r.Departamento,
+                             Semana =  r.Semana
+                         }).ToList() ;
 
                 return Response<List<HoraEmpleadoDto>>.Success(detalleHoras);
             }
@@ -631,8 +672,13 @@ namespace RRHH_WEB_API.Features.Maestros
 
 
                     List<VoucherDto> vouchersporempleado = _paysLipInstance.AsQueryable().AsNoTracking()
-                        .Where(f => f.PayslipRunId == paysliprunid && f.EmployeeId == employeeId && f.PayslipLine.SalaryRuleId != 2 && !categoriesId.Contains(f.PayslipLine.CategoryId))
-                        //.Where(f => f.PayslipRunId == paysliprunid && f.EmployeeId == employeeId && f.PayslipLine.SalaryRuleId != 2)
+                        //.Where(f => f.PayslipRunId == paysliprunid && f.EmployeeId == employeeId && f.PayslipLine.SalaryRuleId != 2 && !categoriesId.Contains(f.PayslipLine.CategoryId))
+                        .Where(f =>
+                        f.PayslipRunId == paysliprunid &&
+                        f.EmployeeId == employeeId &&
+                        (!f.PayslipLine.CategoryId.HasValue ||
+                         !categoriesId.Contains(f.PayslipLine.CategoryId.Value))
+)
                         .Select(x => new VoucherDto
                         {
                             Id = x.Id,
@@ -645,7 +691,6 @@ namespace RRHH_WEB_API.Features.Maestros
                             EmployeeJobName = x.Employee.Job.Name,
                             EmployeeJournal = x.Employee.Journal.Descripcion,
                             BarCode = x.Employee.BarCode,
-                        //Code = x.PayslipLine.Code,
                         DateStart = x.PayslipRun.DateStart,
                             DateEnd = x.PayslipRun.DateEnd,
                             Moneda = x.PayslipRun.CurrencId == 2 ? "USD" : "L"
@@ -656,8 +701,13 @@ namespace RRHH_WEB_API.Features.Maestros
 
 
                     var detalleSalario = _payslipLineInstance.AsQueryable().AsNoTracking()
-                        .Where(f => f.Payslip.PayslipRunId == paysliprunid && f.EmployeId == employeeId && f.SalaryRuleId != 2 && !categoriesId.Contains(f.CategoryId))
-                        //.Where(f => f.Payslip.PayslipRunId == paysliprunid && f.EmployeId == employeeId && f.SalaryRuleId != 2)
+                        //.Where(f => f.Payslip.PayslipRunId == paysliprunid && f.EmployeId == employeeId && f.SalaryRuleId != 2 && !categoriesId.Contains(f.CategoryId))
+                        .Where(f =>
+                        f.Payslip.PayslipRunId == paysliprunid &&
+                        f.Payslip.EmployeeId == employeeId &&
+                        (!f.Payslip.PayslipLine.CategoryId.HasValue ||
+                         !categoriesId.Contains(f.Payslip.PayslipLine.CategoryId.Value))
+)
                         .ToList();
 
 
@@ -832,7 +882,7 @@ namespace RRHH_WEB_API.Features.Maestros
                                                           <th>Cantidad</th>
                                                         </tr>
                                                       </thead>
-                                                      <tbody>
+                                                      <tbody>d
                                                         " + filasDeducciones+ @"
                                                         <tr style='background-color: bisque;font-weight: bold;'>
                                                          <td><strong>Total Egresos</strong></td>
@@ -850,10 +900,6 @@ namespace RRHH_WEB_API.Features.Maestros
 
                     _emailService.EnviarCorreo_General(_emailSendParams);
                 }
-
-                //voucherResponse.PayRolTypeId = payRollType;
-                //voucherResponse.Voucher = voucher;
-                //voucherResponse.VoucherHorasExtas = voucherPorHorasExtras;
 
                 return Response<bool>.Success(true);
 
@@ -874,20 +920,58 @@ namespace RRHH_WEB_API.Features.Maestros
             try
             {
 
-                var roles = _employeeInstance.AsQueryable().AsNoTracking()
-                            .Where(r=> r.Resource.Active==true)
-                            .Select(p => new RolUsuarioDto
+                var userDelegations = _userDelegationInstance.AsQueryable().AsNoTracking()
+                                    .Select(p => new { 
+                                            p.EmployeeId,
+                                            p.UserLevelId,
+                                            p.UserLevel.Name
+                                    }).AsEnumerable();
+
+               var idsFilter = userDelegations.AsQueryable().AsNoTracking().Where(y=>y.UserLevelId==1).Select(f => f.EmployeeId).ToList();
+
+                //Codigo anterior
+                //var roles = _employeeInstance.AsQueryable().AsNoTracking()
+                //            .Where(r => r.Resource.Active == true).ToList();
+
+                //Codigo Nuevo
+                var employees = _employeeInstance.AsQueryable().AsNoTracking()
+                            //.Where(t=> idsFilter.Contains(t.Id)).ToList();
+                            .Where(r => r.Active == true).ToList()
+                            .Select(f => new RolUsuarioDto
                             {
-                                EmployeeId = p.Id,
-                                EmployeeName = p.Name,
-                                NivelUsuarioId = p.UserDelegation.UserLevel.Name == null ? (int)UserLevelEnum.Usuario : p.UserDelegation.UserLevelId,
-                                NivelUsuario = p.UserDelegation.UserLevel.Name == null ? "Usuario" : p.UserDelegation.UserLevel.Name,
-                                Code = p.BarCode
+                                Id = f.Id,
+                                EmployeeName = f.Name,
+                                Code = f.BarCode,
+                                EmployeeId = f.Id,
+                                NivelUsuarioId=2,
+                                NivelUsuario= "Usuario"
+                            }).ToList();
 
-                            }).OrderBy(t=>t.EmployeeName).ToList();
+
+                foreach (var empleado in employees)
+                {
+                    if (idsFilter.Contains( empleado.Id))
+                    {
+                        empleado.NivelUsuarioId = 1;
+                        empleado.NivelUsuario = "Administrador";
+                    }
+
+                }
+
+                //var rolesFinal = employees.Select(p => new RolUsuarioDto
+                //            {
+                //                EmployeeId = p.Id,
+                //                //EmployeeName = p.Name,
+                //                //NivelUsuarioId = p.UserDelegation.UserLevel.Name == null ? (int)UserLevelEnum.Usuario : p.UserDelegation.UserLevelId, //Codigo Annterior
+                //                //NivelUsuarioId = userDelegations.FirstOrDefault(d=> d.EmployeeId==p.Id).Name == null ? (int)UserLevelEnum.Usuario : userDelegations.FirstOrDefault(d => d.EmployeeId == p.Id).UserLevelId,//Codigo Nuevo
+                //                //NivelUsuario = p.UserDelegation.UserLevel.Name == null ? "Usuario" : p.UserDelegation.UserLevel.Name, //Codigo Annterior
+                //                //NivelUsuario = userDelegations.FirstOrDefault(d => d.EmployeeId == p.Id).Name == null ? "Usuario" : userDelegations.FirstOrDefault(d => d.EmployeeId == p.Id).Name,// Codigo Nuevo
+                //                //Code = p.BarCode
+
+                //            }).OrderBy(t=>t.EmployeeName).ToList();
 
 
-                return Response<List<RolUsuarioDto>>.Success(roles);
+                return Response<List<RolUsuarioDto>>.Success(employees);
             }
             catch (Exception ex)
             {
@@ -921,7 +1005,7 @@ namespace RRHH_WEB_API.Features.Maestros
                     _userDelegationInstance.Update(empleado);
                 }
 
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 return Response<bool>.Success(true);
             }
@@ -936,7 +1020,9 @@ namespace RRHH_WEB_API.Features.Maestros
             try
             {
                 Employee employee = _employeeInstance.AsQueryable().FirstOrDefault(x => x.Id == employeeId);
-                employee.Pin = nuevoPin;
+                if (employee == null) return Response<bool>.Validation("Empleado no encontrado");
+
+                employee.Pin = _seguridad.GenerarHash(nuevoPin);
 
                 _employeeInstance.Update(employee);
                 rrhh_Web_DBContext.SaveChanges();
@@ -948,6 +1034,8 @@ namespace RRHH_WEB_API.Features.Maestros
                 return Response<bool>.Validation(ex.Message);
             }
         }
+
+
         #endregion
 
         public string ConvertToBase64(byte[] data)

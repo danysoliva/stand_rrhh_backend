@@ -37,6 +37,7 @@
     <PackageReference Include="ClosedXML" Version="0.96.0" />
     <PackageReference Include="EPPlus" Version="6.0.6" />
     <PackageReference Include="ExcelEngine" Version="1.1.1" />
+    <PackageReference Include="FluentFTP" Version="53.0.2" />
     <PackageReference Include="JsonSubTypes" Version="1.9.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.27" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />

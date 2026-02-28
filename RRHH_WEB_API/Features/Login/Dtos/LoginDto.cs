@@ -8,5 +8,6 @@
         public int UserLevelId { get; set; }
         public bool HasStaffInCharge { get; set; }
         public string Token { get; set; }
+        public string RefreshToken { get; set; }
     }
 }

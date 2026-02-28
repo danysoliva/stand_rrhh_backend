@@ -12,11 +12,11 @@ namespace RRHH_WEB_API._Entidades
         public string State  { get; set; }
         public DateTime DateStart { get; set; }
         public DateTime DateEnd { get; set; }
-        public bool CreditNote { get; set; }
+        public bool? CreditNote { get; set; }
         public int CreateUID { get; set; }
         public DateTime CreateDate { get; set; }
-        public int WriteUID { get; set; }
-        public DateTime WriteDate { get; set; }
+        public int? WriteUID { get; set; }
+        public DateTime? WriteDate { get; set; }
         public int NumerOfDays { get; set; }
         public int PayRollTypeId { get; set; }
         public decimal? TotalInTransference { get; set; }

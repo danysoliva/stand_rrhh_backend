@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,9 @@ namespace RRHH_WEB_API.Features.GestionesVarias
 {
     public class GestionesVariasService
     {
-        private readonly RRHH_Web_DBContext rrhh_Web_DBContext;
+        private readonly RRHH_DBContext rrhh_Web_DBContext;
+        private readonly ACS_DBContext _acs_DBContext;
+
         private readonly DbSet<AutorizacionDeduccionPlanilla> _autorizacionDeduccionPlanillasInstance;
         private readonly DbSet<AutorizacionDeduccionPlanillaEstado> _autorizacionDeduccionPlanillasEstadoInstance;
         private readonly DbSet<Employee> _employeeInstance;
@@ -35,19 +38,23 @@ namespace RRHH_WEB_API.Features.GestionesVarias
         private readonly IWebHostEnvironment _enviroment;
 
 
-        public GestionesVariasService(RRHH_Web_DBContext rrhh_DBContext, IWebHostEnvironment environment)
+        public GestionesVariasService(RRHH_DBContext rrhh_DBContext, IWebHostEnvironment environment,ACS_DBContext acs_DBContext)
         {
             rrhh_Web_DBContext = rrhh_DBContext;
-            _autorizacionDeduccionPlanillasInstance = rrhh_DBContext.AutorizacionDeduccionPlanilla;
-            _autorizacionDeduccionPlanillasEstadoInstance = rrhh_DBContext.AutorizacionDeduccionPlanillaEstado;
+            _acs_DBContext = acs_DBContext;
+
+
+            _autorizacionDeduccionPlanillasInstance = acs_DBContext.AutorizacionDeduccionPlanilla;
+            _autorizacionDeduccionPlanillasEstadoInstance = acs_DBContext.AutorizacionDeduccionPlanillaEstado;
+
             _employeeInstance = rrhh_DBContext.Employee;
             _departmentInstance = rrhh_DBContext.Department;
-            _plazaVacanteInstance = rrhh_DBContext.PlazaVacantes;
-            _plazaVacanteAdjuntoInstance = rrhh_DBContext.PlazaVacanteAdjuntos;
-            _plazaVacantePostulanteInstance = rrhh_DBContext.PlazaVacantePostulantes;
-            _quejaSugerenciaDenunciaInstance = rrhh_DBContext.QuejaSugerenciaDenuncia;
-            _quejaSugerenciaStateInstance = rrhh_DBContext.QuejaSugerenciaDenunciaState;
-            _quejaSugerenciaTypeInstance = rrhh_DBContext.QuejaSugerenciaDenunciaType;
+            _plazaVacanteInstance = acs_DBContext.PlazaVacantes;
+            _plazaVacanteAdjuntoInstance = _acs_DBContext.PlazaVacanteAdjuntos;
+            _plazaVacantePostulanteInstance = _acs_DBContext.PlazaVacantePostulantes;
+            _quejaSugerenciaDenunciaInstance = _acs_DBContext.QuejaSugerenciaDenuncia;
+            _quejaSugerenciaStateInstance = _acs_DBContext.QuejaSugerenciaDenunciaState;
+            _quejaSugerenciaTypeInstance = _acs_DBContext.QuejaSugerenciaDenunciaType;
             _contractInstance = rrhh_DBContext.Contract;
             _payslipRunInstance = rrhh_DBContext.PayslipRun;
             _payslipLineInstance = rrhh_DBContext.PayslipLine;
@@ -81,7 +88,7 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                     deduccionPlanilla.TasaCambio = tasa;
 
                     _autorizacionDeduccionPlanillasInstance.Add(deduccionPlanilla);
-                    rrhh_Web_DBContext.SaveChanges();
+                    _acs_DBContext.SaveChanges();
 
                     return Response<bool>.Success(true);
                 }
@@ -102,8 +109,9 @@ namespace RRHH_WEB_API.Features.GestionesVarias
             try
             {
 
-                var empleados = _employeeInstance.AsQueryable().AsNoTracking()
-                    .Where(r => r.Resource.Active == true)
+                var empleados = _employeeInstance.AsQueryable()
+                    //.Where(r => r..Active == true)
+                    .Where(r => r.Active == true)
                     .Select(x => new EmpleadoDto
                     {
                         Id = x.Id,
@@ -126,19 +134,56 @@ namespace RRHH_WEB_API.Features.GestionesVarias
             try
             {
 
-                var deducciones = _autorizacionDeduccionPlanillasInstance.AsQueryable().AsNoTracking().Where(f => f.Enable == true)
-                    .Select(x => new DeduccionDto
+                //====================Codigo Anterior====================
+                //var deducciones = _autorizacionDeduccionPlanillasInstance.AsQueryable().Where(f => f.Enable == true)
+                //    .Select(x => new DeduccionDto
+                //    {
+                //        Id = x.Id,
+                //        //NombreEmpleado = empleados.FirstOrDefault(f => f.Id == x.EmployeeId).Name,
+                //        //Barcode = x.Empleado.BarCode,
+                //        FechaDeduccion = x.FechaDeduccion,
+                //        FechaCreacion = x.FechaCreacion,
+                //        Concepto = x.Concepto,
+                //        Estado = x.EstadoDeduccionPorPlanilla.Descripcion,
+                //        Monto = x.Monto,
+                //        Currency = x.Currency
+                //    }).ToList().OrderByDescending(c => c.Id).ToList();
+                //====================================================
+
+
+                // PASO 1: Traer las deducciones a memoria primero (solo los datos crudos de esa tabla)
+                var deduccionesList = _autorizacionDeduccionPlanillasInstance.AsQueryable().AsNoTracking()
+                    .Where(f => f.Enable == true)
+                    .OrderByDescending(c => c.Id)
+                    .ToList(); // <--- Aquí se ejecuta el SQL de deducciones
+
+                // PASO 2: Obtener los IDs de los empleados que necesitamos
+                var empleadoIds = deduccionesList.Select(d => d.EmployeeId).Distinct().ToList();
+
+                // PASO 3: Traer solo los empleados necesarios (SQL separado) y ponerlos en un Diccionario para búsqueda rápida
+                var empleadosDiccionario = _employeeInstance.AsQueryable().AsNoTracking()
+                    .Where(e => empleadoIds.Contains(e.Id))
+                    .Select(e => new { e.Id, e.Name, e.BarCode })
+                    .ToDictionary(e => e.Id); // <--- Aquí se ejecuta el SQL de empleados
+
+                // PASO 4: Unir los datos en memoria (C#)
+                var deducciones = deduccionesList.Select(x => {
+                    // Intentamos buscar el empleado en el diccionario
+                    var existeEmpleado = empleadosDiccionario.TryGetValue(x.EmployeeId, out var emp);
+
+                    return new DeduccionDto
                     {
                         Id = x.Id,
-                        NombreEmpleado = x.Empleado.Name,
-                        Barcode = x.Empleado.BarCode,
+                        NombreEmpleado = existeEmpleado ? emp.Name : "No Encontrado",
+                        Barcode = existeEmpleado ? emp.BarCode : "",
                         FechaDeduccion = x.FechaDeduccion,
                         FechaCreacion = x.FechaCreacion,
                         Concepto = x.Concepto,
-                        Estado = x.EstadoDeduccionPorPlanilla.Descripcion,
+                        Estado = _autorizacionDeduccionPlanillasEstadoInstance.AsQueryable().FirstOrDefault(d=> d.Id == x.EstadoId)?.Descripcion,
                         Monto = x.Monto,
                         Currency = x.Currency
-                    }).OrderByDescending(c => c.Id).ToList();
+                    };
+                }).ToList();
 
 
                 return Response<List<DeduccionDto>>.Success(deducciones);
@@ -182,7 +227,7 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                     {
                         deduccionRegistro.EstadoId = 2;
                         _autorizacionDeduccionPlanillasInstance.Update(deduccionRegistro);
-                        rrhh_Web_DBContext.SaveChanges();
+                        _acs_DBContext.SaveChanges();
 
                     }
 
@@ -219,25 +264,39 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                 deduccion.Enable = false;
 
                 _autorizacionDeduccionPlanillasInstance.Update(deduccion);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
 
-                var deducciones = _autorizacionDeduccionPlanillasInstance.AsQueryable().AsNoTracking().Where(f=> f.Enable==true)
-                     .Select(x => new DeduccionDto
+                var empleados = _employeeInstance.AsQueryable().AsNoTracking().ToList();
+
+
+                var deducciones = _autorizacionDeduccionPlanillasInstance.AsQueryable().AsNoTracking().Where(f => f.Enable == true).ToList();
+                 
+                 var deduccionfinal= deducciones
+                    .Select(x => new DeduccionDto
                      {
                          Id = x.Id,
-                         NombreEmpleado = x.Empleado.Name,
-                         Barcode = x.Empleado.BarCode,
-                         FechaDeduccion = x.FechaDeduccion,
+                         NombreEmpleado = empleados.FirstOrDefault(d => d.Id == x.EmployeeId)?.Name ?? "No Encontrado",
+                        //NombreEmpleado = x.Empleado.Name,
+                        Barcode = empleados.FirstOrDefault(d => d.Id == x.EmployeeId)?.BarCode ?? "No Encontrado",
+                        FechaDeduccion = x.FechaDeduccion,
                          FechaCreacion = x.FechaCreacion,
                          Concepto = x.Concepto,
-                         Estado = x.EstadoDeduccionPorPlanilla.Descripcion,
-                         Monto = x.Monto,
+                        Estado = _autorizacionDeduccionPlanillasEstadoInstance.AsQueryable().FirstOrDefault(d => d.Id == x.EstadoId)?.Descripcion,
+                        Monto = x.Monto,
                          Currency = x.Currency
                      }).OrderByDescending(c => c.Id).ToList();
 
 
-                return Response<List<DeduccionDto>>.Success(deducciones);
+
+                //foreach (var item in deducciones)
+                //{
+                //    item.NombreEmpleado = empleados.FirstOrDefault(f => f.Id == item.Id).Name;
+                //    item.Barcode = empleados.FirstOrDefault(f => f.Id == item.Id).BarCode;
+                //}
+
+
+                return Response<List<DeduccionDto>>.Success(deduccionfinal);
             }
             catch (Exception ex)
             {
@@ -272,12 +331,15 @@ namespace RRHH_WEB_API.Features.GestionesVarias
         {
             try
             {
-                var plazas = _plazaVacanteInstance.AsQueryable().AsNoTracking().Where(p => p.Enable == true)
+                var departamentos = _departmentInstance.Where(u => u.Active == true).ToList();
+
+                var plazas = _plazaVacanteInstance.AsQueryable().Where(p => p.Enable == true).ToList()
                      .Select(p => new PlazaDto
                      {
                          Id = p.Id,
                          Titulo = p.Titulo,
-                         Departamento = p.Departamento.Name,
+                         //Departamento = p.Departamento.Name,// codigo Antiguo
+                         Departamento = departamentos.FirstOrDefault(g => g.Id == p.DepartmentId).Name,// Nuevo
                          Requisitos = p.Requisitos,
                          FechaCreacion = p.FechaCreacion.ToString()
                      }).OrderByDescending(p => p.FechaCreacion).ToList();
@@ -297,6 +359,9 @@ namespace RRHH_WEB_API.Features.GestionesVarias
             {
                 PlazaVacante plaza = new PlazaVacante();
 
+                var departamentos = _departmentInstance.AsQueryable().AsNoTracking().Where(u => u.Active == true).ToList();
+
+
                 plaza.DepartmentId = plaza_p.DepartmentId;
                 plaza.Titulo = plaza_p.Titulo;
                 plaza.Requisitos = plaza_p.Requisitos;
@@ -304,20 +369,24 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                 plaza.Enable = true;
 
                 _plazaVacanteInstance.Add(plaza);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
-                var plazas = _plazaVacanteInstance.AsQueryable().AsNoTracking()
-                    .Select(p => new PlazaDto
-                    {
-                        Id = p.Id,
-                        Titulo = p.Titulo,
-                        Departamento = p.Departamento.Name,
-                        Requisitos = p.Requisitos,
-                        FechaCreacion = p.FechaCreacion.ToString()
-                    }).OrderByDescending(o => o.FechaCreacion).ToList();
+                var plazas = _plazaVacanteInstance.AsQueryable().AsNoTracking().Where(p => p.Enable == true).ToList();
 
 
-                return Response<List<PlazaDto>>.Success(plazas);
+                var plazaFinal = plazas
+                     .Select(p => new PlazaDto
+                     {
+                         Id = p.Id,
+                         Titulo = p.Titulo,
+                         //Departamento = p.Departamento.Name,
+                         Departamento = departamentos.FirstOrDefault(g => g.Id == p.DepartmentId).Name,
+                         Requisitos = p.Requisitos,
+                         FechaCreacion = p.FechaCreacion.ToString()
+                     }).OrderByDescending(p => p.FechaCreacion).ToList();
+
+
+                return Response<List<PlazaDto>>.Success(plazaFinal);
             }
             catch (Exception ex)
             {
@@ -335,21 +404,26 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                 plaza.Enable = false;
 
                 _plazaVacanteInstance.Update(plaza);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
+
+                var departamentos = _departmentInstance.AsQueryable().AsNoTracking().Where(u => u.Active == true).ToList();
+
+                var plazas = _plazaVacanteInstance.AsQueryable().AsNoTracking().Where(p => p.Enable == true).ToList();
 
 
-                var plazas = _plazaVacanteInstance.AsQueryable().AsNoTracking().Where(p => p.Enable == true)
+                var plazaFinal = plazas
                      .Select(p => new PlazaDto
                      {
                          Id = p.Id,
                          Titulo = p.Titulo,
-                         Departamento = p.Departamento.Name,
+                         //Departamento = p.Departamento.Name,
+                         Departamento = departamentos.FirstOrDefault(g => g.Id == p.DepartmentId).Name,
                          Requisitos = p.Requisitos,
                          FechaCreacion = p.FechaCreacion.ToString()
                      }).OrderByDescending(p => p.FechaCreacion).ToList();
 
 
-                return Response<List<PlazaDto>>.Success(plazas);
+                return Response<List<PlazaDto>>.Success(plazaFinal);
             }
             catch (Exception ex)
             {
@@ -363,12 +437,7 @@ namespace RRHH_WEB_API.Features.GestionesVarias
             {
                 PlazaVacantePostulante postulante = new PlazaVacantePostulante();
 
-                //List<PlazaVacanteAdjunto> adjuntos = new List<PlazaVacanteAdjunto>();
-
                 PlazaVacanteAdjunto adjunto = new PlazaVacanteAdjunto();
-
-
-                //rrhh_Web_DBContext.Database.BeginTransaction();
 
                 var nombre = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(p => p.Id == plazaVacantePostulante.EmpleadoId).Name;
 
@@ -381,15 +450,13 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                 postulante.Enable = true;
 
                 _plazaVacantePostulanteInstance.Add(postulante);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
-                //rrhh_Web_DBContext.Database.CommitTransaction();
 
                 return Response<bool>.Success(true);
             }
             catch (Exception ex)
             {
-                //rrhh_Web_DBContext.Database.RollbackTransaction();
                 return Response<bool>.Validation(ex.Message);
             }
         }
@@ -399,6 +466,8 @@ namespace RRHH_WEB_API.Features.GestionesVarias
 
             try
             {
+                var empleados = _employeeInstance.AsQueryable().AsNoTracking().Where(r => r.Active == true).ToList();
+
                 var postulantes = _plazaVacantePostulanteInstance.AsQueryable().AsNoTracking().Where(t => t.PlazaVacanteId == plazaId && t.Enable == true)
                     .Select(r => new PostulantesAdminDto
                     {
@@ -410,10 +479,21 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                                                 URL = l.Host+l.Path,
                                                 FileNameReference = l.ReferenceFileName
                                                 }).ToList(),
-                        RecomendadoOInterno = r.EsRecomendado== false ? "Postulante Interno":"Es recomendado por: "+ _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(g=> g.Id==r.EmpleadoId).Name
+                        //RecomendadoOInterno = r.EsRecomendado== false ? "Postulante Interno":"Es recomendado por: "+ _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(g=> g.Id==r.EmpleadoId).Name
                     }).ToList();
 
-                return Response <List<PostulantesAdminDto>>.Success( postulantes);
+                var postulantesFinal = postulantes.Select(r => new PostulantesAdminDto
+                {
+                    Id = r.Id,
+                    Nombre = r.Nombre,
+                    Correo = r.Correo,
+                    Telefono = r.Telefono,
+                    Adjuntos = r.Adjuntos,
+                    RecomendadoOInterno = postulantes.FirstOrDefault(g => g.Id == r.Id).RecomendadoOInterno == null ? "Postulante Interno" : "Es recomendado por: " + empleados.FirstOrDefault(g => g.Id == postulantes.FirstOrDefault(f => f.Id == r.Id).Id).Name
+                }).ToList();
+
+
+                return Response <List<PostulantesAdminDto>>.Success(postulantesFinal);
             }
             catch (Exception ex)
             {
@@ -435,7 +515,7 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                 postulante.Enable = false;
 
                 _plazaVacantePostulanteInstance.Update(postulante);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 var postulantes = _plazaVacantePostulanteInstance.AsQueryable().AsNoTracking().Where(t => t.PlazaVacanteId == postulante.PlazaVacanteId && t.Enable==true)
                     .Select(r => new PostulantesAdminDto
@@ -474,11 +554,11 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                 quejaSugerenciaDenuncia.Descripcion = quejaSugerenciaDto.Descripcion;
                 quejaSugerenciaDenuncia.StateId = 1;
                 quejaSugerenciaDenuncia.CreateDate = Convert.ToDateTime ( DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss"));
-                //quejaSugerenciaDenuncia.LastModification = DBNull.Value;
+                quejaSugerenciaDenuncia.LastModification = quejaSugerenciaDenuncia.CreateDate;
                 quejaSugerenciaDenuncia.TypeId = quejaSugerenciaDto.TypeId;
 
                 _quejaSugerenciaDenunciaInstance.Add(quejaSugerenciaDenuncia);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 return Response<bool>.Success(true);
             }
@@ -578,7 +658,7 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                 dato.StateId = 2;
 
                 _quejaSugerenciaDenunciaInstance.Update(dato);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 return Response<bool>.Success(true);
             }
@@ -603,7 +683,7 @@ namespace RRHH_WEB_API.Features.GestionesVarias
                     dato.LastModification = DateTime.Now;
 
                     _quejaSugerenciaDenunciaInstance.Update(dato);
-                    rrhh_Web_DBContext.SaveChanges();
+                    _acs_DBContext.SaveChanges();
 
                     return Response<bool>.Success(true);
                 }

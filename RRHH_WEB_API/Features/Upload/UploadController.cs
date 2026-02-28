@@ -81,30 +81,7 @@ namespace RRHH_WEB_API.Features.Upload
             return this.ActionResultFrom(response);
         }
 
-        //[HttpPost]
-        //[Route("uploadDocument/{tipo}")]
-        //public async Task<Response<bool>> GuardarDocumento(int tipo)
-        //{
-        //    IFormCollection form = await Request.ReadFormAsync();
-
-        //    if (!form.Files.Any())
-        //    {
-        //        return Response<bool>.Excepcion("No se envió ningún archivo.");
-        //    }
-
-        //    List<IFormFile> files = new List<IFormFile>();
-
-        //    for (int i = 0; i < form.Files.Count; i++)
-        //    {
-        //        files.Add(form.Files[i]);
-        //    }
-
-        //    string host = $"http://" + HttpContext.Request.Host;
-
-        //    return _uploadService.GuardarDocumento(tipo, files, host);
-        //}
-
-
+      
         [HttpPost]
         [Route("uploadDocument/{tipo}/{id_grupo}")]
         public async Task<Response<bool>> GuardarDocumento(int tipo, int id_grupo)

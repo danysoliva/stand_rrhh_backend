@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DocumentFormat.OpenXml.Vml.Office;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RRHH_WEB_API._Entidades;
 using System;
@@ -27,8 +28,13 @@ namespace RRHH_WEB_API._Infraestructura.Map
             builder.Property(x => x.Currency).HasColumnName("currency").HasColumnType("varchar").HasMaxLength(5);
             builder.Property(x => x.TasaCambio).HasColumnName("tasa_cambio").HasColumnType("decimal").IsRequired();
 
-            builder.HasOne(x => x.Empleado).WithMany(x => x.Deducciones).HasForeignKey(g=> g.EmployeeId);
-            builder.HasOne(x => x.EstadoDeduccionPorPlanilla).WithMany(x => x.DeduccionesPorPlanilla).HasForeignKey(g=> g.EstadoId);
+            //builder.HasOne(x => x.Empleado).WithMany(x => x.Deducciones).HasForeignKey(g=> g.EmployeeId);
+            //builder.HasOne(x => x.EstadoDeduccionPorPlanilla).WithMany(x => x.DeduccionesPorPlanilla).HasForeignKey(g=> g.EstadoId);
+
+            builder.HasOne(d => d.EstadoDeduccionPorPlanilla)
+                    .WithMany()
+                    .HasForeignKey(d => d.EstadoId)
+                    .OnDelete(DeleteBehavior.ClientSetNull); // O Restrict, según tu lógica de negocio
         }
     }
 }

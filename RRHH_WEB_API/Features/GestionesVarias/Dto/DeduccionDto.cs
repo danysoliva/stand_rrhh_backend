@@ -8,7 +8,7 @@ namespace RRHH_WEB_API.Features.GestionesVarias.Dto
     public class DeduccionDto
     {
         public int Id { get; set; }
-        public string NombreEmpleado { get; set; }
+        public string? NombreEmpleado { get; set; }
         public string Barcode { get; set; }
         public string Identidad { get; set; }
         public string Concepto { get; set; }

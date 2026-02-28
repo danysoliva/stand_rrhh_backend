@@ -17,14 +17,23 @@ namespace RRHH_WEB_API.Features.Solicitud
 {
     public class SolicitudVacacionService
     {
-        private readonly RRHH_Web_DBContext _dbContext;
+        private readonly RRHH_DBContext _dbContext;
+        private readonly ACS_DBContext _acs_dbContext;
+
         private readonly SolicitudService _solicitudService;
+        private readonly DbSet< RequestVacacion> _solicitudVacaciones;
         private const decimal medioDia = (decimal)0.5;
         private const decimal diaCompleto = 1;
-        public SolicitudVacacionService(RRHH_Web_DBContext rrhh_DBContext, SolicitudService solicitudService)
+
+
+
+        public SolicitudVacacionService(RRHH_DBContext rrhh_DBContext, SolicitudService solicitudService, ACS_DBContext acs_DBCotext)
         {
             _dbContext = rrhh_DBContext;
+            _acs_dbContext = acs_DBCotext;
+
             _solicitudService = solicitudService;
+            _solicitudVacaciones = _acs_dbContext.RequestVacacion;
         }
 
         private ValidarVacacionDto InicializarVacacion(ValidarVacacionDto validarVacacion, List<Feriado> feriadosDelAnioActual)
@@ -128,7 +137,7 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                List<Feriado> feriadosDelAnioActual = _dbContext.Feriado.AsQueryable().AsNoTracking()
+                List<Feriado> feriadosDelAnioActual = _acs_dbContext.Feriado.AsQueryable().AsNoTracking()
                                                         .Where(x => x.FechaInicio.Year == DateTime.Now.Year)
                                                         .ToList();
 
@@ -257,7 +266,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             {
                 Employee empleado = _dbContext.Employee.AsQueryable().AsNoTracking().Where(m => m.Id == empleadoId).Include(x => x.Parent).FirstOrDefault();
 
-                List<SolicitudVacacionDto> solicitudes = _dbContext.RequestVacacion.AsQueryable().AsNoTracking().Where(y => y.Enable == true && y.EmployeeId == empleadoId)
+                List<SolicitudVacacionDto> solicitudes = _solicitudVacaciones.AsQueryable().AsNoTracking().Where(y => y.Enable == true && y.EmployeeId == empleadoId)
                     .Select(x => new SolicitudVacacionDto
                     {
                         Id = x.Id,
@@ -320,8 +329,8 @@ namespace RRHH_WEB_API.Features.Solicitud
                     JefeInmediatoId = (empleado.Parent.ParentId != null) ? (int)empleado.Parent.ParentId : 0,
                 };
 
-                _dbContext.RequestVacacion.Add(solicitudVacacion);
-                _dbContext.SaveChanges();
+               _solicitudVacaciones.Add(solicitudVacacion);
+                _acs_dbContext.SaveChanges();
 
                 RequestVacacionTracking requestVacacionTracking = new RequestVacacionTracking
                 {
@@ -329,9 +338,9 @@ namespace RRHH_WEB_API.Features.Solicitud
                     Descripcion = $"La solicitud se ha creado en estado { (int)EstadoSolicitudEnum.EnProceso }"
                 };
 
-                _dbContext.RequestVacacionTracking.Add(requestVacacionTracking);
-                _dbContext.SaveChanges();
-                _dbContext.Database.CommitTransaction();
+                _acs_dbContext.RequestVacacionTracking.Add(requestVacacionTracking);
+                _acs_dbContext.SaveChanges();
+                _acs_dbContext.Database.CommitTransaction();
 
                 return ObtenerSolicitudesDeVacacionPorEmpleadoId(empleadoId);
             }
@@ -346,11 +355,11 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                RequestVacacion solicitud = _dbContext.RequestVacacion.AsQueryable().Where(x => x.Id == solicitudId).FirstOrDefault();
+                RequestVacacion solicitud = _acs_dbContext.RequestVacacion.AsQueryable().Where(x => x.Id == solicitudId).FirstOrDefault();
                 solicitud.Enable = false;
 
-                _dbContext.RequestVacacion.Update(solicitud);
-                _dbContext.SaveChanges();
+                _acs_dbContext.RequestVacacion.Update(solicitud);
+                _acs_dbContext.SaveChanges();
 
                 return ObtenerSolicitudesDeVacacionPorEmpleadoId(empleadoId);
             }
@@ -363,7 +372,7 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                List<RequestVacacion> solicitudesDeVacaciones = _dbContext.RequestVacacion.AsQueryable().AsNoTracking()
+                List<RequestVacacion> solicitudesDeVacaciones = _acs_dbContext.RequestVacacion.AsQueryable().AsNoTracking()
                     .Include(x => x.Employee).ThenInclude(x => x.Parent)
                     .Include(x => x.RequestState)
                     .Where(x => x.Enable).ToList();
@@ -417,9 +426,9 @@ namespace RRHH_WEB_API.Features.Solicitud
             {
                 _dbContext.Database.BeginTransaction();
 
-                string estadoSolicitud = _dbContext.RequestState.AsQueryable().AsNoTracking().Where(x => x.Id == cambioEstadoSolicitudDto.EstadoId).FirstOrDefault().Name;
+                string estadoSolicitud = _acs_dbContext.RequestState.AsQueryable().AsNoTracking().Where(x => x.Id == cambioEstadoSolicitudDto.EstadoId).FirstOrDefault().Name;
 
-                RequestVacacion solicitudVacacion = _dbContext.RequestVacacion.AsQueryable().Where(x => x.Id == cambioEstadoSolicitudDto.SolicitudId).FirstOrDefault();
+                RequestVacacion solicitudVacacion = _acs_dbContext.RequestVacacion.AsQueryable().Where(x => x.Id == cambioEstadoSolicitudDto.SolicitudId).FirstOrDefault();
                 solicitudVacacion.Comment = cambioEstadoSolicitudDto.Comentario ?? "";
                 solicitudVacacion.RequestStateId = cambioEstadoSolicitudDto.EstadoId;
 
@@ -429,11 +438,11 @@ namespace RRHH_WEB_API.Features.Solicitud
                     Descripcion = $"La solicitud ha cambiado a {estadoSolicitud}",
                 };
 
-                _dbContext.RequestVacacion.Update(solicitudVacacion);
-                _dbContext.RequestVacacionTracking.Add(tracking);
+                _acs_dbContext.RequestVacacion.Update(solicitudVacacion);
+                _acs_dbContext.RequestVacacionTracking.Add(tracking);
 
-                _dbContext.SaveChanges();
-                _dbContext.Database.CommitTransaction();
+                _acs_dbContext.SaveChanges();
+                _acs_dbContext.Database.CommitTransaction();
 
                 return ObtenerSolicitudesDeVacacionPorEstadoId(empleadoId);
             }
@@ -458,7 +467,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                 spanishformat.LongDatePattern = "dddd, dd 'de' MMMM 'del' yyyy";
                 string format = "dddd, dd 'de' MMMM 'del' yyyy";
 
-                VacacionDto vacacion = _dbContext.RequestVacacion.AsQueryable().AsNoTracking()
+                VacacionDto vacacion = _acs_dbContext.RequestVacacion.AsQueryable().AsNoTracking()
                     .Where(y => y.Id == solicitudVacacionId)
                     .Select(x => new VacacionDto
                     {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -15,8 +16,8 @@ namespace RRHH_WEB_API._Entidades
         public DateTime FechaCreacion { get; set; }
         public int UsuarioCreacionId { get; set; }
         public int EstadoId { get; set; }
+        public virtual AutorizacionDeduccionPlanillaEstado  EstadoDeduccionPorPlanilla { get; set; }
         public string Concepto { get; set; }
-        public AutorizacionDeduccionPlanillaEstado EstadoDeduccionPorPlanilla { get; set; }
         public bool Enable { get; set; }
         public string Currency { get; set; }
         public decimal TasaCambio { get; set; }

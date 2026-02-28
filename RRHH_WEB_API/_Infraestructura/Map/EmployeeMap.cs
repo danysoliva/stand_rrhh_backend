@@ -8,7 +8,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
     {
         public EmployeeMap(EntityTypeBuilder<Employee> builder)
         {
-            builder.ToTable("hr_employee", "Odoo");
+            builder.ToTable("hr_employee", "dbo");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.Name).HasColumnName("name").HasColumnType("varchar");
@@ -25,18 +25,19 @@ namespace RRHH_WEB_API._Infraestructura.Map
             builder.Property(x => x.BirthDay).HasColumnName("birthday").HasColumnType("date");
             builder.Property(x => x.IdentificationId).HasColumnName("identification_id").HasColumnType("varchar");
             builder.Property(x => x.BarCode).HasColumnName("barcode").HasColumnType("varchar");
-            builder.Property(x => x.Pin).HasColumnName("pin").HasColumnType("varchar");
+            builder.Property(x => x.Pin).HasColumnName("pin").HasColumnType("varbinary");
             builder.Property(x => x.DepartmentId).HasColumnName("department_id").HasColumnType("int");
             builder.Property(x => x.ParentId).HasColumnName("parent_id").HasColumnType("int");
-            builder.Property(x => x.Image).HasColumnName("x_image").HasColumnType("varbinary");
+            //builder.Property(x => x.Image).HasColumnName("x_image").HasColumnType("varbinary");
             builder.Property(x => x.ResourceId).HasColumnName("resource_id").HasColumnType("int");
+            builder.Property(x => x.Active).HasColumnName("active").HasColumnType("bit");
 
             builder.HasOne(x => x.UserDelegation).WithOne(x => x.Employee);
             builder.HasOne(x => x.Department).WithMany(x => x.Empleados).HasForeignKey(x => x.DepartmentId);
             builder.HasOne(x => x.Job).WithMany(x => x.Empleados).HasForeignKey(x => x.JobId);
             builder.HasOne(x => x.Journal).WithMany(x => x.Empleados).HasForeignKey(x => x.JournalId);
             builder.HasOne(x => x.Contract).WithOne(x => x.Employee);
-            builder.HasOne(x => x.SolicitudConstancia).WithMany(x => x.Empleados).HasForeignKey(x => x.JobId); ;
+            //builder.HasOne(x => x.SolicitudConstancia).WithMany(x => x.Empleados).HasForeignKey(x => x.JobId); ;
             builder.HasOne(x => x.Resource).WithOne(r => r.Empleado);
         }
     }
