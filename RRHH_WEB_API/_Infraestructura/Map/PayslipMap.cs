@@ -32,6 +32,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
             builder.Property(x => x.CreateDate).HasColumnName("create_date").HasColumnType("datetime");
             builder.Property(x => x.WriteUID).HasColumnName("write_uid").HasColumnType("int");
             builder.Property(x => x.WriteDate).HasColumnName("write_date").HasColumnType("datetime");
+            builder.Property(x => x.Enable).HasColumnName("enable").HasColumnType("bit");
 
             builder.HasOne(x => x.Employee).WithMany(f => f.Paslips).HasForeignKey(t=>t.EmployeeId);
             builder.HasOne(x => x.PayslipRun).WithOne(f => f.Payslip);

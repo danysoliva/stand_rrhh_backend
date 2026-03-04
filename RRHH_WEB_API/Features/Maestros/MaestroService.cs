@@ -435,13 +435,19 @@ namespace RRHH_WEB_API.Features.Maestros
 
 
                 var idAExcluir = new List<int>{ 8, 9 };
-                var stateAExcluir = new List<string>{ "anulated", "draft", "Cancelada" };
+                var stateAExcluir = new List<string>{ "anulated", "draft", "Cancelada" , "Borrador" };
+                var stateAExcluirPayslip = new List<string>{ "anulated", "draft", "Cancelada" };
 
                 var lastDate = _payslipRunInstance.AsQueryable().AsNoTracking().OrderByDescending(t => t.CreateDate).First().CreateDate.AddMonths(-6).Date;
 
 
-                List <NominaEncabezadoDto> NominasEncabezado = _payslipRunInstance.AsQueryable().AsNoTracking()
-                    .Where(f => f.Payslip.EmployeeId == employeeId && !idAExcluir.Contains(f.PayRollTypeId) && !stateAExcluir.Contains(f.State) && f.CreateDate.Date>=lastDate)
+                List<NominaEncabezadoDto> NominasEncabezado = _payslipRunInstance.AsQueryable().AsNoTracking()
+                    .Where(f => f.Payslip.EmployeeId == employeeId 
+                            && !idAExcluir.Contains(f.PayRollTypeId) 
+                            && !stateAExcluir.Contains(f.State) && f.CreateDate.Date >= lastDate
+                            && !stateAExcluirPayslip.Contains(f.Payslip.State)
+                            && f.Payslip.Enable==true
+                            )
                     .Select(x => new NominaEncabezadoDto
                     {
                         ID = x.Id,

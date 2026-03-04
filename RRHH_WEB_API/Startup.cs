@@ -46,11 +46,6 @@ namespace RRHH_WEB_API
             services.AddDbContext<ACS_DBContext>(options =>
              options.UseSqlServer(Configuration.GetConnectionString("cnxACS")));
 
-            //var emailConfig = Configuration
-            //        .GetSection("EmailConfiguration")
-            //        .Get<EmailConfiguration>();
-            //            services.AddSingleton(emailConfig);
-
             services.AddTransient<LoginService>();
             services.AddTransient<MaestroService>();
             services.AddTransient<SolicitudService>();

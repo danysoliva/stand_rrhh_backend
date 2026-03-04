@@ -93,6 +93,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             _emailConfiguration.From = this._configuration.GetValue<string>("Smtp:FromAddress");
             _emailConfiguration.DisplayName = this._configuration.GetValue<string>("Smtp:DisplayName");
             _emailConfiguration.RRHHEmail = this._configuration.GetValue<string>("Smtp:RRHH_Mail");
+
             _acs_DBContext = acs_DBContext;
         }
 

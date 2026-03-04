@@ -112,24 +112,6 @@ namespace RRHH_WEB_API.Features.Email
         }
 
 
-
-
-        public Response<bool> TestEmail()
-        {
-            try
-            {
-
-
-
-                return Response<bool>.Success(true);
-            }
-            catch (Exception ex)
-            {
-                return Response<bool>.Excepcion(ex.Message);
-            }
-        }
-
-
         private void EnviarCorreo(DataTable dt, string email, string nombre)
         {
             string file = "C:\\temp\\DetalleDeHoras.xlsx";
@@ -209,7 +191,6 @@ namespace RRHH_WEB_API.Features.Email
 
             message.Subject = emailSendParams.Subject;
             message.Body = emailSendParams.Body;
-            //message.Body = "<p>Estimado(a) " + nombre + ", reciba un cordial saludo,</p> <p>Se adjunta el archivo de horas trabajas que usted solicitó</p> ";
             message.IsBodyHtml = true;
 
             smtp.EnableSsl = true;
@@ -220,6 +201,47 @@ namespace RRHH_WEB_API.Features.Email
             smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
 
             smtp.Send(message);
+
+        }
+
+
+        public bool EnviarCorreo_QuejasSugerencias()
+        {
+
+            MailMessage message = new MailMessage();
+            SmtpClient smtp = new SmtpClient();
+            bool enviado = false;
+
+            try
+            {
+                string body = "<html>  \r\n<body style='font-family: Arial, sans-serif; margin:0; padding:0; background:#f4f6f8;'>    \r\n\t<table width='100%' cellpadding='0' cellspacing='0' role='presentation'>     \r\n\t\t<tr>        \r\n\t\t<td align='center' style='padding:20px 10px;'>        \r\n\t\t\t<table width='600' cellpadding='0' cellspacing='0' role='presentation' style='background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.08);'>\r\n\t\t\t\t<!-- Encabezado -->            \r\n\t\t\t\t<tr>              \r\n\t\t\t\t\t<td style='background:#004b8d; color:#ffffff; padding:20px; text-align:left;'>\r\n\t\t\t\t\t<h1 style='margin:0; font-size:20px;'>Notificación: Nuevo Registro</h1>\r\n\t\t\t\t\t</td>            \r\n\t\t\t\t</tr>            \r\n\t\t\t\t<!-- Cuerpo -->            \r\n\t\t\t\t<tr>\r\n\t\t\t\t\t<td style='padding:20px; color:#333333;'>                \r\n\t\t\t\t\t\t<p style='margin:0 0 12px 0;'>Estimado equipo de <strong>Recursos Humanos</strong>,</p>\r\n\t\t\t\t\t\t<p style='margin:0 0 12px 0; line-height:1.6;'>Les informamos que se ha recibido un nuevo registro en el segmento de <strong>Quejas/Denuncias/Sugerencias</strong> en el Stand RRHH.</p>\r\n\t\t\t\t\t\t<p style='margin:0 0 12px 0; line-height:1.6;'>Les solicitamos revisar la información y dar el seguimiento correspondiente.</p>\r\n\t\t\t\t\t\t<table cellpadding='0' cellspacing='0' role='presentation' style='margin:18px 0;'>\r\n\t\t\t\t\t\t<tr>                    \r\n\t\t\t\t\t\t<td>                      \r\n\t\t\t\t\t\t<a href='http://10.50.11.26:82/#/pages/quejas-sugerencias-denuncias-admin' target='_blank' style='display:inline-block; text-decoration:none; padding:12px 18px; border-radius:6px; background:#004b8d; color:#ffffff; font-weight:600;'>Dar Seguimiento</a>\r\n\t\t\t\t\t\t</td>\r\n\t\t\t\t\t\t</tr>\r\n\t\t\t\t\t\t</table>                \r\n\t\t\t\t\t\t<p style='margin:0 0 6px 0; font-size:13px; color:#555555;'>En caso de requerir información adicional, pueden comunicarse con el área de soporte o administración del sistema.</p>\r\n\t\t\t\t\t</td>\r\n\t\t\t\t</tr>\r\n\t\t\t\t<!-- Pie -->\r\n\t\t\t\t<tr>\r\n\t\t\t\t\t<td style='background:#f1f3f5; padding:12px 20px; font-size:12px; color:#666666;'>\r\n\t\t\t\t\t<p style='margin:0;'>Este es un mensaje automático. Por favor, no responda directamente a este correo.</p>\r\n\t\t\t\t\t</td>\r\n\t\t\t\t</tr>\r\n\t\t\t</table>\r\n\t\t</td>\r\n\t\t</tr>\r\n\t</table>\r\n</body>\r\n</html>";
+                message.From = new MailAddress(_emailConfiguration.From, _emailConfiguration.DisplayName);
+                //message.To.Add("reuceda05@hotmail.com");
+                message.To.Add(_emailConfiguration.RRHHEmail);
+
+                message.Subject = "Notificación: Nuevo Registro Quejas/Denuncias/Sugerencias";
+                message.Body = body;
+                message.IsBodyHtml = true;
+
+                smtp.EnableSsl = true;
+                smtp.Port = _emailConfiguration.Port;
+                smtp.Host = _emailConfiguration.SmtpServer;
+                //smtp.UseDefaultCredentials = true;
+                smtp.Credentials = new NetworkCredential(_emailConfiguration.UserName, _emailConfiguration.Password);
+                smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+
+
+                smtp.Send(message);
+
+                enviado = true;
+
+                return enviado;
+            }
+            catch (Exception ex)
+            {
+
+                return false;
+            }
 
         }
     }

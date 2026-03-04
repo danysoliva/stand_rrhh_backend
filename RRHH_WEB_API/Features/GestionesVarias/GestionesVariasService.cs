@@ -7,6 +7,7 @@ using RRHH_WEB_API._Common;
 using RRHH_WEB_API._Entidades;
 using RRHH_WEB_API._Entidades.QuejasSugerenciasDenuncias;
 using RRHH_WEB_API._Infraestructura;
+using RRHH_WEB_API.Features.Email;
 using RRHH_WEB_API.Features.GestionesVarias.Dto;
 using RRHH_WEB_API.Features.GestionesVarias.Dtos;
 using System;
@@ -21,6 +22,8 @@ namespace RRHH_WEB_API.Features.GestionesVarias
     {
         private readonly RRHH_DBContext rrhh_Web_DBContext;
         private readonly ACS_DBContext _acs_DBContext;
+        private readonly EmailService emailService;
+
 
         private readonly DbSet<AutorizacionDeduccionPlanilla> _autorizacionDeduccionPlanillasInstance;
         private readonly DbSet<AutorizacionDeduccionPlanillaEstado> _autorizacionDeduccionPlanillasEstadoInstance;
@@ -38,10 +41,11 @@ namespace RRHH_WEB_API.Features.GestionesVarias
         private readonly IWebHostEnvironment _enviroment;
 
 
-        public GestionesVariasService(RRHH_DBContext rrhh_DBContext, IWebHostEnvironment environment,ACS_DBContext acs_DBContext)
+        public GestionesVariasService(RRHH_DBContext rrhh_DBContext, IWebHostEnvironment environment,ACS_DBContext acs_DBContext,EmailService _emailService)
         {
             rrhh_Web_DBContext = rrhh_DBContext;
             _acs_DBContext = acs_DBContext;
+            emailService = _emailService;
 
 
             _autorizacionDeduccionPlanillasInstance = acs_DBContext.AutorizacionDeduccionPlanilla;
@@ -559,6 +563,18 @@ namespace RRHH_WEB_API.Features.GestionesVarias
 
                 _quejaSugerenciaDenunciaInstance.Add(quejaSugerenciaDenuncia);
                 _acs_DBContext.SaveChanges();
+
+                //Enviar correo de notificación de nueva queja/sugerencia/denuncia
+               var respuesta= emailService.EnviarCorreo_QuejasSugerencias();
+
+                if (!respuesta)
+                    {
+                        // Aquí podrías decidir si quieres marcar la queja/sugerencia/denuncia como "Notificada" o algo similar, o simplemente loguear el error.
+                        // Por ejemplo, podrías agregar un campo "Notificado" a la entidad QuejaSugerenciaDenuncia y actualizarlo aquí.
+                        // Pero para este ejemplo, solo vamos a loguear el error.
+                    return Response<bool>.Excepcion("Error al enviar correo de notificación para nueva queja/sugerencia/denuncia.");
+
+                }
 
                 return Response<bool>.Success(true);
             }

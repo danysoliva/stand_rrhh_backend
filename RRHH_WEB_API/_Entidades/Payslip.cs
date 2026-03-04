@@ -26,6 +26,7 @@ namespace RRHH_WEB_API._Entidades
         public int? WriteUID { get; set; }
         public DateTime? WriteDate { get; set; }
         public bool? CreditNote { get; set; }
+        public bool? Enable { get; set; }
 
 
         public PayslipLine? PayslipLine { get; set; }
