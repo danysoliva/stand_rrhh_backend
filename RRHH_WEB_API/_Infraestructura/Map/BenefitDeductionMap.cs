@@ -12,13 +12,13 @@ namespace RRHH_WEB_API._Infraestructura.Map
     {
         public BenefitDeductionMap(EntityTypeBuilder<BenefitDeduction> builder)
         {
-            builder.ToTable("hr_benefits_deductions", "Odoo");
+            builder.ToTable("hr_benefits_deductions");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).HasColumnName("id").HasColumnType("int");
             builder.Property(x => x.ContractId).HasColumnName("contract_id").HasColumnType("int");
             builder.Property(x => x.ConceptId).HasColumnName("concept_id").HasColumnType("int");
             builder.Property(x => x.Active).HasColumnName("active").HasColumnType("bit");
-            builder.Property(x => x.Value).HasColumnName("value").HasColumnType("decimal");
+            builder.Property(x => x.Value).HasColumnName("value").HasColumnType("float");
             builder.Property(x => x.Type).HasColumnName("type").HasColumnType("varchar");
 
 

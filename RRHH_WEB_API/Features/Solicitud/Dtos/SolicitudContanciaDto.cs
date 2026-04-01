@@ -7,7 +7,7 @@ namespace RRHH_WEB_API.Features.Solicitud.Dtos
     {
         public int Id { get; set; }
         public int EmployeeId { get; set; }
-        public string EmployeeName { get; set; }
+        public string? EmployeeName { get; set; }
         public int RequestTypeId { get; set; }
         public string RequestType { get; set; }
         public int RequestStateId { get; set; }
@@ -15,6 +15,7 @@ namespace RRHH_WEB_API.Features.Solicitud.Dtos
         public string Comment { get; set; }
         public DateTime CreatedDate { get; set; }
         public bool EsVistaRRHHAdministrador { get; set; }
+        public bool EsAdministrador { get; set; }
     }
 
     public class NuevaSolicitudConstanciaDto

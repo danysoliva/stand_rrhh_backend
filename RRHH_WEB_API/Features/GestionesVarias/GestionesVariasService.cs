@@ -204,22 +204,28 @@ namespace RRHH_WEB_API.Features.GestionesVarias
         {
             try
             {
+                var empleado_id = _autorizacionDeduccionPlanillasInstance.AsQueryable().AsNoTracking()
+                    .FirstOrDefault(u=> u.Id==deduccion_id).EmployeeId;
+
+                var empleado = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(u => u.Id == empleado_id);
+                var contrato = _contractInstance.AsQueryable().AsNoTracking().FirstOrDefault(u => u.EmployeeId == empleado_id);
+
 
                 var deduccion = _autorizacionDeduccionPlanillasInstance.AsQueryable().AsNoTracking()
                     .Where(t => t.Id == deduccion_id)
                     .Select(x => new DeduccionNewFormatDto
                     {
                         Id = x.Id,
-                        NombreEmpleado = x.Empleado.Name,
-                        Barcode = x.Empleado.BarCode,
+                        NombreEmpleado = empleado.Name,
+                        Barcode = empleado.BarCode,
                         FechaDeduccion = x.FechaDeduccion,
                         FechaCreacion = x.FechaCreacion,
-                        Identidad = x.Empleado.IdentificationId,
+                        Identidad = empleado.IdentificationId,
                         Concepto = x.Concepto,
                         Currency=x.Currency==null ? "" :x.Currency,
                         Estado = x.EstadoDeduccionPorPlanilla.Descripcion,
                         Monto = x.Monto,
-                       FechaIngreso=x.Empleado.Contract.DateStart
+                       FechaIngreso= contrato.DateStart ?? DateTime.Now
                     }).OrderByDescending(c => c.Id).FirstOrDefault();
 
                 if (deduccion != null)

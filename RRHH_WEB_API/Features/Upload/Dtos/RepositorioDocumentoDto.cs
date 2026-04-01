@@ -14,7 +14,7 @@ namespace RRHH_WEB_API.Features.Upload.Dtos
         public string   FullPath { get; set; }
         public string   ReferenceFileName { get; set; }
 
-        public int GrupoId { get; set; } = 0;
+        public int? GrupoId { get; set; } = 0;
         public string GrupoDocumento { get; set; } = string.Empty;
     } 
 }

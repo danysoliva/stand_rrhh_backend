@@ -14,5 +14,6 @@ namespace RRHH_WEB_API._Entidades
         public decimal NumberOfDays { get; set; }
         public int HolidayStatusId  { get; set; }
         public DateTime CreateDate { get; set; }
+        public int EstadoId { get; set; }
     }
 }

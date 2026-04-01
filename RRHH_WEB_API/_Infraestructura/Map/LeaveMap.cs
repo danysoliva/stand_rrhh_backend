@@ -20,6 +20,7 @@ namespace RRHH_WEB_API._Infraestructura.Map
             builder.Property(x => x.NumberOfDays).HasColumnName("number_of_days").HasColumnType("float");
             builder.Property(x => x.HolidayStatusId).HasColumnName("holiday_status_id").HasColumnType("int");
             builder.Property(x => x.CreateDate).HasColumnName("create_date").HasColumnType("datetime");
+            builder.Property(x => x.EstadoId).HasColumnName("id_estado").HasColumnType("int");
 
             builder.HasOne(x => x.Employee).WithMany(f => f.Leaves).HasForeignKey(t => t.EmployeeId);
         }

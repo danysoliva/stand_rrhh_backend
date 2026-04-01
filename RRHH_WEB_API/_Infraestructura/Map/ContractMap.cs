@@ -15,13 +15,13 @@ namespace RRHH_WEB_API._Infraestructura.Map
             builder.Property(x => x.Active).HasColumnName("active").HasColumnType("bit");
             builder.Property(x => x.EmployeeId).HasColumnName("employee_id").HasColumnType("int");
             builder.Property(x => x.DepartmentId).HasColumnName("department_id").HasColumnType("int");
-            builder.Property(x => x.JobId).HasColumnName("job_id").HasColumnType("int");
-            builder.Property(x => x.TypeId).HasColumnName("type_id").HasColumnType("int");
-            builder.Property(x => x.DateStart).HasColumnName("date_start").HasColumnType("date");
-            builder.Property(x => x.DateEnd).HasColumnName("date_end").HasColumnType("date");
-            builder.Property(x => x.Trial_DateEnd).HasColumnName("trial_date_end").HasColumnType("date");
-            builder.Property(x => x.ResourceCalendarId).HasColumnName("resource_calendar_id").HasColumnType("int");
-            builder.Property(x => x.Wage).HasColumnName("wage").HasColumnType("decimal");
+            builder.Property(x => x.JobId).HasColumnName("puesto_id").HasColumnType("int");
+            builder.Property(x => x.TypeId).HasColumnName("id_tipo_contrato").HasColumnType("int");
+            builder.Property(x => x.DateStart).HasColumnName("fecha_inicio").HasColumnType("date");
+            builder.Property(x => x.DateEnd).HasColumnName("fecha_fin").HasColumnType("date");
+            builder.Property(x => x.Trial_DateEnd).HasColumnName("temporal_fecha_fin").HasColumnType("date");
+            builder.Property(x => x.ResourceCalendarId).HasColumnName("recursos_calendario_id").HasColumnType("int");
+            builder.Property(x => x.Wage).HasColumnName("salario").HasColumnType("decimal");
             builder.Property(x => x.State).HasColumnName("state").HasColumnType("varchar");
         }
     }

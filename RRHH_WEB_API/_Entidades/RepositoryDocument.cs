@@ -20,7 +20,7 @@ namespace RRHH_WEB_API._Entidades
         public int Tipo { get; set; }
 
         [Column("id_grupo")]
-        public int GrupoID { get; set; }
+        public int? GrupoID { get; set; }
 
         [ForeignKey("GrupoID")]
         public virtual RepositoryGroup RepositoryGroup { get; set; }

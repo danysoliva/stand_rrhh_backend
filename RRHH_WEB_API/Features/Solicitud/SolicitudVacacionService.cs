@@ -475,7 +475,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                         Employee = x.Employee.Name,
                         Job = x.Employee.Job.Name,
                         Department = x.Employee.Department.Name,
-                        FechaIngreso = x.Employee.Contract.DateStart.ToString(format, new CultureInfo("es-ES")),
+                        FechaIngreso = x.Employee.Contract.DateStart.Value.ToString(format, new CultureInfo("es-ES")),
                         CantidadDiasVacacion = x.CantidadDiasVacacion,
                         FechaInicio = x.FechaInicio.ToString(format, new CultureInfo("es-ES")),
                         FechaFin = x.FechaFin.ToString(format, new CultureInfo("es-ES")),

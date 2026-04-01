@@ -22,6 +22,7 @@ namespace RRHH_WEB_API.Features.Solicitud
 
 
         private readonly DbSet<Employee> _employeeInstance;
+        private readonly DbSet<Job> _JobInstance;
         private readonly DbSet<UserDelegation> _userDelegationInstance;
         private readonly DbSet<UserLevel> _userLevelInstance;
         private readonly DbSet<RepositoryImage> _repositoryImageInstance;
@@ -43,6 +44,7 @@ namespace RRHH_WEB_API.Features.Solicitud
         private readonly DbSet<RequestItem> _requestItemInstance;
         private readonly DbSet<RequestConstanciaItem> _requestConstanciaItemInstance;
         private readonly DbSet<PeriodoVacacion> _peridoVacacionInstance;
+        private readonly DbSet<EmailNotificacionConfig> _emailNotificacionConfigInstance;
        
 
         private readonly DbSet<TipoVacacion> _tipoVacacionesInstance;
@@ -60,6 +62,7 @@ namespace RRHH_WEB_API.Features.Solicitud
 
 
             _employeeInstance = rrhh_DBContext.Employee;
+            _JobInstance = rrhh_DBContext.Job;
             _userDelegationInstance = _acs_DBContext.UserDelegation;
             _userLevelInstance = _acs_DBContext.UserLevel;
             _repositoryImageInstance = _acs_DBContext.RepositoryImage;
@@ -82,6 +85,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             _requestConstanciaItemInstance = _acs_DBContext.RequestConstanciaItem;
             _tipoVacacionesInstance = _acs_DBContext.TipoVacaciones;
             _peridoVacacionInstance = _acs_DBContext.PeriodoVacacion;
+            _emailNotificacionConfigInstance = rrhh_Web_DBContext.EmailNotificacionConfig;
 
             _configuration = configuration;
 
@@ -154,20 +158,6 @@ namespace RRHH_WEB_API.Features.Solicitud
             return validarVacacion;
         }
 
-        //private DateTime VerificarFecha(DateTime fecha, List<Feriado> feriadosDelAnioActual)
-        //{
-        //    bool esDiaFeriado = feriadosDelAnioActual.Any(x => x.FechaInicio.Date == fecha.Date);
-        //    DateTime fechaReingreso = fecha;
-
-        //    if (esDiaFeriado)
-        //    {
-        //        fecha = fecha.Date.AddDays(1);
-        //        fechaReingreso = VerificarFecha(fecha.Date, feriadosDelAnioActual);
-        //    }
-
-        //    return fechaReingreso;
-        //}
-
         private DateTime VerificarFecha(DateTime fecha, List<Feriado> feriadosDelAnioActual, bool feriadoCompleto = false)
         {
             decimal valor;
@@ -200,11 +190,6 @@ namespace RRHH_WEB_API.Features.Solicitud
             if (cantidadDiasVacacionYSumaDiasFeriadosSonDecimal == false)
                 validarVacacion.CantidadDiasVacacion -= feriadosEncontrados.Sum(x => x.CantidadDias);
 
-
-            //if (cantidadEsDecimal && sumaDiasFeriadosEsDecimal)
-            //    validarVacacion.CantidadDiasVacacion = validarVacacion.CantidadDiasVacacion;
-            //else
-            //    validarVacacion.CantidadDiasVacacion -= feriadosEncontrados.Sum(x => x.CantidadDias);
 
             validarVacacion.CantidadDiasVacacion = (validarVacacion.CantidadDiasVacacion == 0) ? -1 : validarVacacion.CantidadDiasVacacion;
             return validarVacacion;
@@ -245,7 +230,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             try
             {
                 var salarioOrdinario = _contractInstance.AsQueryable().AsNoTracking()
-                                        .FirstOrDefault(d => d.EmployeeId == employeeId && d.State != "close" && d.Active).Wage;
+                                        .FirstOrDefault(d => d.EmployeeId == employeeId).Wage;
 
                 ConstanciaTrabajoIngresoDeduccionDto ingreso = new ConstanciaTrabajoIngresoDeduccionDto
                 {
@@ -267,9 +252,23 @@ namespace RRHH_WEB_API.Features.Solicitud
             {
                 List<int> conceptosAIncluir = new List<int> { 1, 2 };
 
-                decimal? otrosIngresos = _benefitDeductionInstance.AsQueryable().AsNoTracking()
-                                        .Where(d => conceptosAIncluir.Contains(d.ConceptId ?? 0) && d.Contract.EmployeeId == employeeId && d.Type == "pi" && d.Contract.Active && d.Contract.State != "close" && d.Active == true)
-                                        .Sum(f => f.Value);
+
+
+                //decimal? otrosIngresos = _benefitDeductionInstance.AsQueryable().AsNoTracking()
+                //                        .Where(d => conceptosAIncluir.Contains(d.ConceptId ?? 0) && d.Contract.EmployeeId == employeeId && d.Type == "pi" && d.Contract.Active && d.Contract.State != "close" && d.Active == true)
+                //                        .Sum(f => (decimal?)f.Value);
+
+                decimal? otrosIngresos = _benefitDeductionInstance
+                .AsQueryable()
+                .AsNoTracking()
+                .Where(d => conceptosAIncluir.Contains(d.ConceptId ?? 0)
+                    && d.Contract.EmployeeId == employeeId
+                    && d.Type == "pi"
+                    && d.Contract.Active
+                    && d.Contract.State != "close"
+                    && d.Active == true)
+                .Sum(f => (decimal?)f.Value);
+
 
                 List<int> cantidadHoras = new List<int> { 81, 64, 65, 63 };
                 List<int> TotalLineas = new List<int> { 82, 68, 69, 70, 86, 71 };
@@ -315,30 +314,31 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                List<int> conceptosAExcluir = new List<int> { 1, 2, 3, 14, 17, 18, 20, 22, 383, 9 };
+                //List<int> conceptosAExcluir = new List<int> { 1, 2, 3, 14, 17, 18, 20, 22, 383, 9 };
 
-                var deducciones = from rci in _requestConstanciaItemInstance.AsQueryable().AsNoTracking()
-                                    .Where(r => r.RequestConstanciaId == solicitudConstanciaId && r.RequestItemId != depreciacionConceptoId)
-                                  join d in _benefitDeductionInstance.AsQueryable().AsNoTracking()
-                                    .Where(d => d.Contract.EmployeeId == employeeId && d.Type == "pi" && d.Contract.Active && d.Contract.State != "close" && d.Active == true && !conceptosAExcluir.Contains(d.Id))
-                                  on rci.RequestItemId equals d.Concept.Id into gd
-                                  from d_rci in gd.DefaultIfEmpty()
-                                  select new ConstanciaTrabajoIngresoDeduccionDto
-                                  {
-                                      Id = rci.RequestItemId,
-                                      Nombre = rci.Name,
-                                      Monto = ((rci.Value == 0) ? d_rci.Value ?? 0 : rci.Value) / tasa
-                                  };
+                //var deducciones = from rci in _requestConstanciaItemInstance.AsQueryable().AsNoTracking()
+                //                    .Where(r => r.RequestConstanciaId == solicitudConstanciaId && r.RequestItemId != depreciacionConceptoId)
+                //                  join d in _benefitDeductionInstance.AsQueryable().AsNoTracking()
+                //                    .Where(d => d.Contract.EmployeeId == employeeId && d.Type == "pi" && d.Contract.Active && d.Contract.State != "close" && d.Active == true && !conceptosAExcluir.Contains(d.Id))
+                //                  on rci.RequestItemId equals d.Concept.Id into gd
+                //                  from d_rci in gd.DefaultIfEmpty()
+                //                  select new ConstanciaTrabajoIngresoDeduccionDto
+                //                  {
+                //                      Id = rci.RequestItemId,
+                //                      Nombre = rci.Name,
+                //                      Monto = ((rci.Value == 0) ? d_rci.Value ?? 0 : rci.Value) / tasa
+                //                  };
 
-                foreach (var deduccion in deducciones)
-                {
-                    int deduccionCafeteria = 4;
-                    if (deduccion.Id == deduccionCafeteria)
-                    {
-                        decimal? deduccionPorCafeteria = _payslipLineInstance.Where(x => x.EmployeId == employeeId && x.Active && x.Code == "CAF" && x.SalaryRuleId == 50).OrderByDescending(x => x.Id).Take(2).Sum(x => x.Amount);
-                        deduccion.Monto = deduccionPorCafeteria ?? 0;
-                    }
-                }
+                //foreach (var deduccion in deducciones)
+                //{
+                //    int deduccionCafeteria = 4;
+
+                //    if (deduccion.Id == deduccionCafeteria)
+                //    {
+                //        decimal? deduccionPorCafeteria = _payslipLineInstance.Where(x => x.EmployeId == employeeId && x.Active && x.Code == "CAF" && x.SalaryRuleId == 50).OrderByDescending(x => x.Id).Take(2).Sum(x => x.Amount);
+                //        deduccion.Monto = deduccionPorCafeteria ?? 0;
+                //    }
+                //}
 
                 string sql = "EXEC dbo.usp_GetDeductions @employee_id ="+employeeId;
 
@@ -346,7 +346,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                 .FromSqlRaw(sql) .ToList().Select(x=> new ConstanciaTrabajoIngresoDeduccionDto { 
                     Id=x.Id,
                     Nombre=x.Nombre,
-                    Monto=x.Monto
+                    Monto=  x.Monto
                 });
 
                 return deductions.ToList();
@@ -454,6 +454,9 @@ namespace RRHH_WEB_API.Features.Solicitud
                 _requestConstanciaInstance.Add(solicitudConstancia);
                 _acs_DBContext.SaveChanges();
 
+                var correosRRHH = _emailNotificacionConfigInstance.AsQueryable().AsNoTracking()
+                .Where(x => x.Active == true && x.EventCode == "NOTIFICACION_CONSTANCIA").Select(x => x.Email).ToList();
+
                 ///Correo a el solicitante
                 var mail = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == solicitudConstancia.EmployeeId).WorkEmail;
                 var name = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == solicitudConstancia.EmployeeId).Name;
@@ -468,8 +471,8 @@ namespace RRHH_WEB_API.Features.Solicitud
                                             "<p>Se ha creado una solicitud de constancia, se le estará notificando el avance de la misma<p>" +
                                             "<p>Saludos,<p>";
 
-                    //_emailSendParams.Destinatarios.Add(mail ?? "");
-                    _emailSendParams.Destinatarios.Add("reuceda05@hotmail.com");
+                    _emailSendParams.Destinatarios.Add(mail ?? "");
+                    //_emailSendParams.Destinatarios.Add("reuceda05@hotmail.com");
 
                     EnviarCorreo(_emailSendParams);
                 }
@@ -482,9 +485,13 @@ namespace RRHH_WEB_API.Features.Solicitud
                                             "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a este dirección</p>" +
                                              "<p>Saludos,</p>";
 
-                    _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
-                    //_emailSendParams.Destinatarios.Add("reuceda05@hotmail.com");
+                    foreach (var correo in correosRRHH)
+                    {
+                        _emailSendParams.Destinatarios.Add(correo);
+                    }
 
+                    //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+               
 
                     EnviarCorreo(_emailSendParams);
                 }
@@ -492,11 +499,14 @@ namespace RRHH_WEB_API.Features.Solicitud
                 //Correo a RRHH
                 _emailSendParams.Subject = "Se ha creado una solicitud de Constancia";
                 _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + name + "</strong> ha creado una solicitud de constancia,</p>" +
-                                        "<p>Usted puede acceder al portal de <a href='http://10.50.11.32:82/#/auth/login'>Stand RRHH<a> para poder gestionar su solicituda</p>" +
+                                        "<p>Usted puede acceder al portal de <a href='http://10.50.11.26:82/#/auth/login'>Stand RRHH<a> para poder gestionar su solicituda</p>" +
                                         "<p>Saludos,</p>";
 
-                _emailSendParams.Destinatarios = new List<string> { _emailConfiguration.RRHHEmail };
-                //_emailSendParams.Destinatarios.Add("reuceda05@hotmail.com");
+                //_emailSendParams.Destinatarios = new List<string> { _emailConfiguration.RRHHEmail };
+                foreach (var correo in correosRRHH)
+                {
+                    _emailSendParams.Destinatarios.Add(correo);
+                }
 
                 EnviarCorreo(_emailSendParams);
 
@@ -505,7 +515,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             }
             catch (Exception e)
             {
-                rrhh_Web_DBContext.Database.RollbackTransaction();
+                _acs_DBContext.Database.RollbackTransaction();
                 return Response<List<SolicitudContanciaDto>>.Excepcion(e.Message);
             }
         }
@@ -535,6 +545,9 @@ namespace RRHH_WEB_API.Features.Solicitud
                 Employee empleado = _employeeInstance.AsQueryable().AsNoTracking()
                                         //.Include(x => x.UserDelegation)
                                         .FirstOrDefault(x => x.Id == empleadoId);
+
+                var empleados = _employeeInstance.AsNoTracking().AsEnumerable();
+
                 empleado.UserDelegation = _userDelegationInstance.FirstOrDefault(f=> f.EmployeeId == empleadoId);
 
                 bool esVistaRRHHAdministrador = empleado.EsEmpleadoRRHHAdministrador();
@@ -546,28 +559,58 @@ namespace RRHH_WEB_API.Features.Solicitud
                 }
 
                 List<int> empleadosACargo = ObtenerEmpleadosACargo(empleadoId);
-                IEnumerable<SolicitudContanciaDto> solicitudes = _requestConstanciaInstance.AsQueryable().AsNoTracking()
-                                                                    .Where(x => x.Enable == true
-                                                                            && x.RequestStateId != (int)EstadoSolicitudEnum.Denegado                                                                            )
-                                                                    .Select(x => new SolicitudContanciaDto
-                                                                    {
-                                                                        Id = x.Id,
-                                                                        //EmployeeName = x.Employee.Name,//Codigo viejo
-                                                                        EmployeeName = empleado.Name,//Codigo Nuevo
-                                                                        EmployeeId = x.EmployeeId,
-                                                                        RequestTypeId = x.ResquestTypeId,
-                                                                        RequestType = x.RequestType.Name,
-                                                                        RequestStateId = x.RequestStateId,
-                                                                        RequestState = x.RequestState.Name,
-                                                                        Comment = x.Comment,
-                                                                        CreatedDate = x.CreatedDate,
-                                                                        EsVistaRRHHAdministrador = esVistaRRHHAdministrador
-                                                                    }).OrderBy(x => x.CreatedDate).ToList();
 
+
+                // 1. Obtenemos los datos de la primera base de datos (Solicitudes)
+                // Usamos .ToList() para cerrar la consulta de este contexto antes de pasar al siguiente
+                var datosSolicitudes = _requestConstanciaInstance.AsNoTracking()
+                    .Where(x => x.Enable && x.RequestStateId != (int)EstadoSolicitudEnum.Denegado)
+                    .Select(x => new {
+                        x.Id,
+                        x.EmployeeId,
+                        x.ResquestTypeId,
+                        RequestTypeName = x.RequestType.Name,
+                        x.RequestStateId,
+                        RequestStateName = x.RequestState.Name,
+                        x.Comment,
+                        x.CreatedDate
+                    })
+                    .ToList();
+
+                // 2. Extraemos los IDs de empleados para no traer toda la tabla de la otra DB
+                var idsEmpleados = datosSolicitudes.Select(s => s.EmployeeId).Distinct().ToList();
+
+                // 3. Consultamos el segundo contexto (Empleados) solo por esos IDs
+                var diccionarioEmpleados = _employeeInstance.AsNoTracking()
+                    .Where(e => idsEmpleados.Contains(e.Id))
+                    .Select(e => new { e.Id, e.Name })
+                    .ToDictionary(e => e.Id, e => e.Name);
+
+                // 4. Combinamos ambos resultados en tu DTO final (Esto ocurre 100% en memoria)
+                var solicitudes = datosSolicitudes.Select(x => new SolicitudContanciaDto
+                {
+                    Id = x.Id,
+                    EmployeeId = x.EmployeeId,
+                    // Buscamos el nombre en el diccionario que creamos del segundo contexto
+                    EmployeeName = diccionarioEmpleados.TryGetValue(x.EmployeeId, out var nombre) ? nombre : "No encontrado",
+                    RequestTypeId = x.ResquestTypeId,
+                    RequestType = x.RequestTypeName,
+                    RequestStateId = x.RequestStateId,
+                    RequestState = x.RequestStateName,
+                    Comment = x.Comment,
+                    CreatedDate = x.CreatedDate,
+                    EsVistaRRHHAdministrador = esVistaRRHHAdministrador,
+                    EsAdministrador = esAdministrador
+                })
+                .OrderByDescending(x => x.CreatedDate)
+                .ToList();
+
+                 
                 bool consultarSolicitudesFiltradasPorEstado = estadoId != 0;
+
                 if (consultarSolicitudesFiltradasPorEstado)
                 {
-                    solicitudes = solicitudes.Where(x => x.RequestStateId == estadoId);
+                    solicitudes = solicitudes.Where(x => x.RequestStateId == estadoId).ToList();
                 }
 
                 return Response<List<SolicitudContanciaDto>>.Success(solicitudes.ToList());
@@ -582,14 +625,14 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                rrhh_Web_DBContext.Database.BeginTransaction();
+                _acs_DBContext.Database.BeginTransaction();
 
 
                 RequestConstancia solicitud = _requestConstanciaInstance.AsQueryable().Where(x => x.Id == cambioEstadoSolicitudDto.SolicitudId).FirstOrDefault();
                 solicitud.Comment = cambioEstadoSolicitudDto.Comentario ?? "";
                 solicitud.RequestStateId = cambioEstadoSolicitudDto.EstadoId;
                 _acs_DBContext.RequestConstancia.Update(solicitud);
-                rrhh_Web_DBContext.SaveChanges();
+                _acs_DBContext.SaveChanges();
 
                 if (cambioEstadoSolicitudDto.EstadoId == (int)EstadoSolicitudEnum.Aprobado)
                 {
@@ -608,10 +651,13 @@ namespace RRHH_WEB_API.Features.Solicitud
                     }
 
 
-                    rrhh_Web_DBContext.SaveChanges();
+                    _acs_DBContext.SaveChanges();
                 }
 
-                rrhh_Web_DBContext.Database.CommitTransaction();
+                _acs_DBContext.Database.CommitTransaction();
+
+                var correosRRHH = _emailNotificacionConfigInstance.AsQueryable().AsNoTracking()
+                .Where(x => x.Active == true && x.EventCode == "NOTIFICACION_CONSTANCIA").Select(x => x.Email).ToList();
 
                 ///Correo a el solicitante
                 var mail = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == solicitud.EmployeeId).WorkEmail;
@@ -639,8 +685,12 @@ namespace RRHH_WEB_API.Features.Solicitud
                     _emailSendParams.Body = @"<p>Srs(as) de RRHH, <strong>" + name + "</strong> ha creado una solicitud de constancia. La cual ha cambiado de estado a <strong>" + estado + "</strong></p>" +
                                             "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a este dirección</p>" +
                                              "<p>Saludos,</p>";
-                    //+"<p>Saludos,</p>";
-                    _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+              
+                    //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+                    foreach (var correo in correosRRHH)
+                    {
+                        _emailSendParams.Destinatarios.Add(correo);
+                    }
 
                     EnviarCorreo(_emailSendParams);
                 }
@@ -660,11 +710,23 @@ namespace RRHH_WEB_API.Features.Solicitud
                 RequestConstancia constancia = _requestConstanciaInstance.AsQueryable().Where(p => p.Id == solicitudConstanciaId).FirstOrDefault();
                 int empleadoIdConstancia = constancia.EmployeeId;
 
-                Employee empleado = _employeeInstance.AsQueryable().AsNoTracking().Include(x => x.UserDelegation).FirstOrDefault(x => x.Id == empleadoId);
-                if (!empleado.EsEmpleadoRRHHAdministrador())
+
+                var rolUsuaio = _userDelegationInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.EmployeeId == empleadoId);
+
+                var empleado = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == constancia.EmployeeId);
+
+                var usuarioLogueado = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == empleadoId);
+
+                usuarioLogueado.UserDelegation = rolUsuaio;
+                    
+
+                //Employee empleado = _employeeInstance.AsQueryable().AsNoTracking().Include(x => x.UserDelegation).FirstOrDefault(x => x.Id == empleadoId);
+
+                if (!usuarioLogueado.EsEmpleadoRRHHAdministrador() && !usuarioLogueado.EsEmpleadoAdministrador())
                 {
                     return Response<ConstanciaTrabajoDto>.Validation("No tiene permiso para realizar esta acción");
                 }
+
 
                 ConstanciaTrabajoDto constanciaTrabajo = _employeeInstance.AsQueryable().AsNoTracking()
                     .Where(y => y.Id == empleadoIdConstancia)
@@ -672,11 +734,11 @@ namespace RRHH_WEB_API.Features.Solicitud
                     {
                         TipoConstanciaId = constancia.ResquestTypeId,
                         Moneda = x.Contract.TypeId == 2 ? "USD" : "L",
-                        Employee = x.Name,
+                        Employee = empleado.Name,
                         IdentificationId = x.IdentificationId,
                         Department = x.Department.Name,
                         Job = x.Job.Name,
-                        FechaIngreso = x.Contract.DateStart,
+                        FechaIngreso = x.Contract.DateStart??DateTime.Now,
                         Ingresos = new List<ConstanciaTrabajoIngresoDeduccionDto>(),
                         Deducciones = new List<ConstanciaTrabajoIngresoDeduccionDto>(),
                     }).FirstOrDefault();
@@ -804,13 +866,18 @@ namespace RRHH_WEB_API.Features.Solicitud
             try
             {
                 List<int> requestStateID = new List<int> { 1,2,4,6 };
+                List<int> HolidayStatusID = new List<int> { 5,9 };
+                List<int> EstadosLeaveID = new List<int> { 2,5 };
 
                 decimal totalDiasVacacion = _peridoVacacionInstance.AsQueryable().AsNoTracking()
                                     .Where(x => x.EmployeeId == employeeId)
                                     .Sum(x => x.Days);
-
+                    
                 decimal cantidadDiasGozados =  rrhh_Web_DBContext.Leave.AsQueryable().AsNoTracking()
-                                                    .Where(x => x.EmployeeId == employeeId && x.State == "validate" && x.HolidayStatusId == 5)
+                                                    //.Where(x => x.EmployeeId == employeeId && x.State == "validate" && x.HolidayStatusId == 5)
+                                                    .Where(x => x.EmployeeId == employeeId 
+                                                            && !EstadosLeaveID.Contains( x.EstadoId) 
+                                                            && HolidayStatusID.Contains(x.HolidayStatusId))
                                                     .Sum(x => x.NumberOfDays);
 
                 decimal cantidadDiasSolicitados = _acs_DBContext.RequestVacacion.AsQueryable().AsNoTracking()
@@ -849,6 +916,10 @@ namespace RRHH_WEB_API.Features.Solicitud
                                                         && x.RequestStateId != (int)EstadoSolicitudEnum.RechazadoPorRRHH
                                                         && (x.FechaInicio.Date <= nuevaSolicitudVacacionDto.FechaFin.Date && nuevaSolicitudVacacionDto.FechaInicio.Date <= x.FechaFin.Date));
 
+
+                var correosRRHH = _emailNotificacionConfigInstance.AsQueryable().AsNoTracking()
+                    .Where(x => x.Active == true && x.EventCode=="NOTIFICACION_VACACIONES").Select(x => x.Email).ToList();
+
                 if (coincideConOtraVacacionLeave || coincideConOtraVacacionRequest)
                 {
                     return Response<List<SolicitudVacacionDto>>.Validation("Las fechas seleccionadas coinciden con una vacación gozada o solicitud de vacación.");
@@ -865,7 +936,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                     return Response<List<SolicitudVacacionDto>>.Validation("No tiene suficientes días pendientes de vacación.");
                 }
 
-                rrhh_Web_DBContext.Database.BeginTransaction();
+                _acs_DBContext.Database.BeginTransaction();
 
                 Employee empleado = _employeeInstance.AsQueryable().AsNoTracking().Where(m => m.Id == empleadoId).Include(x => x.Parent).FirstOrDefault();
 
@@ -873,16 +944,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                 {
                     return Response<List<SolicitudVacacionDto>>.Validation("No se pudo completar la solicitud, debido a que no tiene configurado un jefe inmediato a nivel del sistema. Por favor ponerse en contacto con Recursos Humanos.");
                 }
-
-                //List<SolicitudVacacionDto> solicitudesDeVacaciones = ObtenerSolicitudesDeVacacionPorEmpleadoId(empleadoId).Data;
-
-                //bool haySolicitudesVacacionPendientes = solicitudesDeVacaciones
-                //    .Where(x => x.RequestStateId == (int)EstadoSolicitudEnum.EnProceso).Any();
-
-                //if (haySolicitudesVacacionPendientes)
-                //{
-                //    return Response<List<SolicitudVacacionDto>>.Validation("Aún tiene una solicitud 'En Proceso'.");
-                //}
+                 
 
                 RequestVacacion solicitudVacacion = new RequestVacacion
                 {
@@ -900,7 +962,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                 };
 
                     _requestVacacionInstance.Add(solicitudVacacion);
-                    rrhh_Web_DBContext.SaveChanges();
+                    _acs_DBContext.SaveChanges();
 
                 RequestVacacionTracking requestVacacionTracking = new RequestVacacionTracking
                 {
@@ -909,8 +971,8 @@ namespace RRHH_WEB_API.Features.Solicitud
                 };
 
                 _requestVacacionTrackingInstance.Add(requestVacacionTracking);
-                rrhh_Web_DBContext.SaveChanges();
-                rrhh_Web_DBContext.Database.CommitTransaction();
+                _acs_DBContext.SaveChanges();
+                _acs_DBContext.Database.CommitTransaction();
 
 
                 ///Correo a el solicitante
@@ -921,6 +983,8 @@ namespace RRHH_WEB_API.Features.Solicitud
                 var mailJefeInmediato = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == solicitudVacacion.JefeInmediatoId)?.WorkEmail ?? "";
                 var nameJefeInmediato = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.Id == solicitudVacacion.JefeInmediatoId)?.Name ?? "";
 
+
+
                 if (!string.IsNullOrEmpty(mailSolicitante))
                 {
 
@@ -930,6 +994,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                     _emailSendParams.Body = "<p>Estimado(a)  <strong>" + nameSolicitante + "</strong>, reciba un cordial saludo,</p>" +
                                             "<p>Se ha creado una solicitud de vacaciones, se le estará notificando el avance del mismo<p>" +
                                             "<p>Saludos,<p>";
+
                     _emailSendParams.Destinatarios.Add(mailSolicitante);
 
                     EnviarCorreo(_emailSendParams);
@@ -942,8 +1007,11 @@ namespace RRHH_WEB_API.Features.Solicitud
                     _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha creado una solicitud de Vacaciones.</p>" +
                                             "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a este dirección</p>" +
                                              "<p>Saludos,</p>";
-                    //+"<p>Saludos,</p>";
-                    _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+
+                    foreach (var mail in correosRRHH)
+                    {
+                        _emailSendParams.Destinatarios.Add(mail);
+                    }
 
                     EnviarCorreo(_emailSendParams);
                 }
@@ -951,13 +1019,13 @@ namespace RRHH_WEB_API.Features.Solicitud
 
                 if (!string.IsNullOrEmpty(mailJefeInmediato))
                 {
-
-                    //Correo a RRHH
-                    _emailSendParams.Subject = "Se ha creado una solicitud";
+ 
+                    _emailSendParams.Subject = "Se ha creado una solicitud de Vacaciones";
                     _emailSendParams.Body = "<p>Estimado(a) <strong>" + nameJefeInmediato + "</strong>, " + nameSolicitante + " ha creado una solicitud de vacaciones,</p>" +
-                                            "<p>Usted puede acceder al portal de <a href='http://10.50.11.32:82/#/auth/login'>Stand RRHH<a> para poder gestionar su solicitud</p>" +
+                                            "<p>Usted puede acceder al portal de <a href='http://10.50.11.26:82/#/auth/login'>Stand RRHH<a> para poder gestionar su solicitud</p>" +
                                             "<p>Saludos,</p>";
                     _emailSendParams.Destinatarios = new List<string> { mailJefeInmediato };
+
                     EnviarCorreo(_emailSendParams);
                 }
 
@@ -965,7 +1033,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             }
             catch (Exception e)
             {
-                rrhh_Web_DBContext.Database.RollbackTransaction();
+                _acs_DBContext.Database.RollbackTransaction();
                 return Response<List<SolicitudVacacionDto>>.Excepcion(e.Message);
             }
         }
@@ -974,7 +1042,7 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                rrhh_Web_DBContext.Database.BeginTransaction();
+                _acs_DBContext.Database.BeginTransaction();
 
                 Employee empleado = _employeeInstance.AsQueryable().AsNoTracking().Include(x => x.UserDelegation).FirstOrDefault(x => x.Id == empleadoId);
                 if (!empleado.EsEmpleadoRRHHAdministrador())
@@ -995,14 +1063,14 @@ namespace RRHH_WEB_API.Features.Solicitud
                 };
                 _requestVacacionTrackingInstance.Add(requestVacacionTracking);
 
-                rrhh_Web_DBContext.SaveChanges();
-                rrhh_Web_DBContext.Database.CommitTransaction();
+                _acs_DBContext.SaveChanges();
+                _acs_DBContext.Database.CommitTransaction();
 
                 return ObtenerSolicitudesDeVacacionPorEstadoId(empleadoId);
             }
             catch (Exception e)
             {
-                rrhh_Web_DBContext.Database.RollbackTransaction();
+                _acs_DBContext.Database.RollbackTransaction();
                 return Response<List<SolicitudVacacionDto>>.Excepcion(e.Message);
             }
         }
@@ -1037,7 +1105,7 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                rrhh_Web_DBContext.Database.BeginTransaction();
+                _acs_DBContext.Database.BeginTransaction();
                 
                 RequestVacacion solicitud = _requestVacacionInstance.AsQueryable().Where(x => x.Id == solicitudId).FirstOrDefault();
                 solicitud.Enable = false;
@@ -1057,7 +1125,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             }
             catch (Exception e)
             {
-                rrhh_Web_DBContext.Database.RollbackTransaction();
+                _acs_DBContext.Database.RollbackTransaction();
                 return Response<List<SolicitudVacacionDto>>.Excepcion(e.Message);
             }
         }
@@ -1078,19 +1146,20 @@ namespace RRHH_WEB_API.Features.Solicitud
                 bool esVistaRRHHAdministrador = empleado.EsEmpleadoRRHHAdministrador();
                 bool esAdministrador = empleado.EsEmpleadoAdministrador();
 
+
                 List<int> empleadosACargo = ObtenerEmpleadosACargo(empleadoId);
                 bool esVistaJefatura = empleadosACargo.Count() > 0;
 
-                IEnumerable<SolicitudVacacionDto> solicitudes = _requestVacacionInstance.AsQueryable().AsNoTracking()
+
+                var datosSolicitudes = _requestVacacionInstance.AsQueryable().AsNoTracking()
                                                                     .Where(x => x.Enable == true
                                                                             && x.SincronizadoEnOdoo == false
                                                                             && x.RequestStateId != (int)EstadoSolicitudEnum.RechazadoPorJefeInmediato
                                                                             && x.RequestStateId != (int)EstadoSolicitudEnum.RechazadoPorRRHH)
-                                                                    .Select(x => new SolicitudVacacionDto
-                                                                    {
+                                                                    .Select(x => new {
                                                                         Id = x.Id,
                                                                         EmployeeId = x.EmployeeId,
-                                                                        Employee = empleado.Name,
+                                                           
                                                                         RequestStateId = x.RequestStateId,
                                                                         RequestState = x.RequestState.Name,
                                                                         FechaInicio = x.FechaInicio,
@@ -1100,15 +1169,78 @@ namespace RRHH_WEB_API.Features.Solicitud
                                                                         CreatedDate = x.CreatedDate,
                                                                         Observaciones = x.Observaciones,
                                                                         CubreVacaciones = x.CubreVacaciones,
-                                                                        Comment = x.Comment,
-                                                                        //JefeInmediato = (x.Employee.Parent != null) ? x.Employee.Parent.Name : "", //Codigo Antiguo
-                                                                        JefeInmediato = (empleado.Parent != null) ? empleado.Parent.Name : "",//Codigo Nuevo
-                                                                        //MailJefeInmediato = (x.Employee.Parent != null) ? x.Employee.Parent.WorkEmail : "", //Codigo Antiguo
-                                                                        MailJefeInmediato = (empleado.Parent != null) ? empleado.Parent.WorkEmail : "", //Codigo Nuevo
+                                                                        Comment = x.Comment,                                                                       
+                                                                        //JefeInmediato = (empleado.Parent != null) ? empleado.Parent.Name : "",//Codigo Nuevo
+                                                                         //MailJefeInmediato = (empleado.Parent != null) ? empleado.Parent.WorkEmail : "", //Codigo Nuevo
                                                                         EsVistaRRHHAdministrador = esVistaRRHHAdministrador,
                                                                         EsVistaJefatura = empleadosACargo.Contains(x.EmployeeId),
-                                                                        EsVistaAdministrador= esAdministrador
+                                                                        EsVistaAdministrador = esAdministrador
                                                                     });
+
+
+                // 2. Extraemos los IDs de empleados para no traer toda la tabla de la otra DB
+                var idsEmpleados = datosSolicitudes.Select(s => s.EmployeeId).Distinct().ToList();
+
+                // 3. Consultamos el segundo contexto (Empleados) solo por esos IDs
+                var diccionarioEmpleados = _employeeInstance.AsNoTracking()
+                    .Where(e => idsEmpleados.Contains(e.Id))
+                    .Select(e => new { e.Id, e.Name, JefeInmediato=e.Parent.Name, MailJefeInmediato =e.Parent.WorkEmail})
+                    .ToDictionary(e => e.Id);
+
+
+                var solicitudes = datosSolicitudes.Select(x => new SolicitudVacacionDto
+                {
+                    Id = x.Id,
+                    EmployeeId = x.EmployeeId,
+                    Employee = diccionarioEmpleados.ContainsKey(x.EmployeeId) ? diccionarioEmpleados[x.EmployeeId].Name : "Empleado no encontrado",
+                    RequestStateId = x.RequestStateId,
+                    RequestState = x.RequestState,
+                    FechaInicio = x.FechaInicio,
+                    FechaFin = x.FechaFin,
+                    FechaReintegro = x.FechaReintegro,
+                    CantidadDiasVacacion = x.CantidadDiasVacacion,
+                    CreatedDate = x.CreatedDate,
+                    Observaciones = x.Observaciones,
+                    CubreVacaciones = x.CubreVacaciones,
+                    Comment = x.Comment,
+                    JefeInmediato = diccionarioEmpleados.ContainsKey(x.EmployeeId) ? diccionarioEmpleados[x.EmployeeId].JefeInmediato : "Jefe no encontrado",
+                    //JefeInmediato = (empleado.Parent != null) ? empleado.Parent.Name : "",//Codigo Nuevo
+                    MailJefeInmediato = diccionarioEmpleados.ContainsKey(x.EmployeeId) ? diccionarioEmpleados[x.EmployeeId].MailJefeInmediato : "Mail jefe no encontrado",
+                    //MailJefeInmediato = (empleado.Parent != null) ? empleado.Parent.WorkEmail : "", //Codigo Nuevo
+                    EsVistaRRHHAdministrador = esVistaRRHHAdministrador,
+                    EsVistaJefatura = empleadosACargo.Contains(x.EmployeeId),
+                    EsVistaAdministrador = esAdministrador
+                }).OrderByDescending(x => x.CreatedDate)
+                .ToList();
+
+                //IEnumerable<SolicitudVacacionDto> solicitudes = _requestVacacionInstance.AsQueryable().AsNoTracking()
+                //                                                    .Where(x => x.Enable == true
+                //                                                            && x.SincronizadoEnOdoo == false
+                //                                                            && x.RequestStateId != (int)EstadoSolicitudEnum.RechazadoPorJefeInmediato
+                //                                                            && x.RequestStateId != (int)EstadoSolicitudEnum.RechazadoPorRRHH)
+                //                                                    .Select(x => new SolicitudVacacionDto
+                //                                                    {
+                //                                                        Id = x.Id,
+                //                                                        EmployeeId = x.EmployeeId,
+                //                                                        Employee = empleado.Name,
+                //                                                        RequestStateId = x.RequestStateId,
+                //                                                        RequestState = x.RequestState.Name,
+                //                                                        FechaInicio = x.FechaInicio,
+                //                                                        FechaFin = x.FechaFin,
+                //                                                        FechaReintegro = x.FechaReintegro,
+                //                                                        CantidadDiasVacacion = x.CantidadDiasVacacion,
+                //                                                        CreatedDate = x.CreatedDate,
+                //                                                        Observaciones = x.Observaciones,
+                //                                                        CubreVacaciones = x.CubreVacaciones,
+                //                                                        Comment = x.Comment,
+                //                                                        //JefeInmediato = (x.Employee.Parent != null) ? x.Employee.Parent.Name : "", //Codigo Antiguo
+                //                                                        JefeInmediato = (empleado.Parent != null) ? empleado.Parent.Name : "",//Codigo Nuevo
+                //                                                        //MailJefeInmediato = (x.Employee.Parent != null) ? x.Employee.Parent.WorkEmail : "", //Codigo Antiguo
+                //                                                        MailJefeInmediato = (empleado.Parent != null) ? empleado.Parent.WorkEmail : "", //Codigo Nuevo
+                //                                                        EsVistaRRHHAdministrador = esVistaRRHHAdministrador,
+                //                                                        EsVistaJefatura = empleadosACargo.Contains(x.EmployeeId),
+                //                                                        EsVistaAdministrador = esAdministrador
+                //                                                    });
 
                 bool consultarSolicitudesFiltradasPorEstado = estadoId != 0;
 
@@ -1116,7 +1248,7 @@ namespace RRHH_WEB_API.Features.Solicitud
 
                 if (consultarSolicitudesFiltradasPorEstado) //Si en la pantalla se quiere filtrar por un estado en especiico
                 {
-                    solicitudes = solicitudes.Where(x => x.RequestStateId == estadoId);
+                    solicitudes = solicitudes.Where(x => x.RequestStateId == estadoId).ToList();
                 }
 
                 if (esVistaJefatura && esAdministrador)
@@ -1128,14 +1260,14 @@ namespace RRHH_WEB_API.Features.Solicitud
                 }
                 else if (esVistaJefatura && esVistaRRHHAdministrador == false) // si es Jefe y no es administrador
                 {
-                    solicitudes = solicitudes.Where(x => empleadosACargo.Contains(x.EmployeeId)); //Las solicitudes que apareceran seran las de su personal a cargo,                 
+                    solicitudes = solicitudes.Where(x => empleadosACargo.Contains(x.EmployeeId)).ToList(); //Las solicitudes que apareceran seran las de su personal a cargo,                 
                 }
 
                 else if (esVistaJefatura == false && esVistaRRHHAdministrador)//No es Jefe pero si es admin de RRH
                 {
 
                     //solicitudes = solicitudes.Where(x => x.RequestStateId == (int)EstadoSolicitudEnum.AprobadoPorJefeInmediato); //Las solicitudes que apareceran seran las que tienen estado 'Aprobado por jefe inmediato'
-                    solicitudes = solicitudes.Where(x => x.RequestStateId == (int)EstadoSolicitudEnum.AprobadoPorJefeInmediato || x.RequestStateId == (int)EstadoSolicitudEnum.AprobadoPorRRHH || x.RequestStateId == (int)EstadoSolicitudEnum.EnProceso); //Las solicitudes que apareceran seran las que tienen estado 'Aprobado por jefe inmediato'
+                    solicitudes = solicitudes.Where(x => x.RequestStateId == (int)EstadoSolicitudEnum.AprobadoPorJefeInmediato || x.RequestStateId == (int)EstadoSolicitudEnum.AprobadoPorRRHH || x.RequestStateId == (int)EstadoSolicitudEnum.EnProceso).ToList() ; //Las solicitudes que apareceran seran las que tienen estado 'Aprobado por jefe inmediato'
                                                                                                                                                                                                  //var test = solicitudes.Where(x => x.EmployeeId == 288);
                 }
                 else if (esVistaJefatura && esVistaRRHHAdministrador) //Si es jefe y es admin de RRHH
@@ -1171,7 +1303,7 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                rrhh_Web_DBContext.Database.BeginTransaction();
+                _acs_DBContext.Database.BeginTransaction();
 
                 string estadoSolicitud = _requestStateInstance.AsQueryable().AsNoTracking().Where(x => x.Id == cambioEstadoSolicitudDto.EstadoId).FirstOrDefault().Name;
 
@@ -1190,6 +1322,9 @@ namespace RRHH_WEB_API.Features.Solicitud
 
                 _acs_DBContext.SaveChanges();
                 _acs_DBContext.Database.CommitTransaction();
+
+                var correosRRHH = _emailNotificacionConfigInstance.AsQueryable().AsNoTracking()
+                  .Where(x => x.Active == true && x.EventCode == "NOTIFICACION_VACACIONES").Select(x => x.Email).ToList();
 
 
                 ///Correo a el solicitante
@@ -1226,8 +1361,12 @@ namespace RRHH_WEB_API.Features.Solicitud
                             _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha solicitado vacaciones las cuales han sido aprobadas por su jefe inmediato.</p>" +
                                                     "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a esta dirección</p>" +
                                                      "<p>Saludos,</p>";
-                            //+"<p>Saludos,</p>";
-                            _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+
+                            foreach (var mail in correosRRHH)
+                            {
+                                _emailSendParams.Destinatarios.Add(mail);
+                            }
+                            //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
 
                             EnviarCorreo(_emailSendParams);
                         }
@@ -1240,13 +1379,17 @@ namespace RRHH_WEB_API.Features.Solicitud
                         _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha creado una solicitud de Vacaciones las cuales ya han sido aprobadas por el jefe inmediato.</p>" +
                                                 "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a este dirección</p>" +
                                                  "<p>Saludos,</p>";
-                        //+"<p>Saludos,</p>";
-                        _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+
+                        foreach (var mail in correosRRHH)
+                        {
+                            _emailSendParams.Destinatarios.Add(mail);
+                        }
+                        //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
 
                         EnviarCorreo(_emailSendParams);
                         break;
 
-                    case 5://Es Aprobado por RRHH
+                    case 5://Es Rechazado por Jefe Inmediato
                         if (!string.IsNullOrEmpty(mailSolicitante))
                         {
 
@@ -1254,9 +1397,8 @@ namespace RRHH_WEB_API.Features.Solicitud
 
                             _emailSendParams.Subject = "Su solicitud de vacaciones ha cambiado de estado";
                             _emailSendParams.Body = "<p>Estimado(a) " + nameSolicitante + ", reciba un cordial saludo,</p>" +
-                                                    "<p>Le notificamos que <strong>RRHH</strong> ha aprobado su solicitud de vacaciones<p>" +
-                                                    "<p>Le deseamos que tenga unas excelentes vacaciones!<p>" +
-                                                    "<p>Saludos,<p>";
+                                                   "<p>Le notificamos que su jefe inmediato <strong>" + nameJefeInmediato + "</strong> ha rechazado su solicitud vacaciones<p>" +
+                                                   "<p>Saludos,<p>";
                             _emailSendParams.Destinatarios.Add(mailSolicitante);
 
                             EnviarCorreo(_emailSendParams);
@@ -1266,11 +1408,15 @@ namespace RRHH_WEB_API.Features.Solicitud
                             _emailSendParams.Destinatarios = new List<string>();
 
                             _emailSendParams.Subject = "Su solicitud de vacaciones ha cambiado de estado";
-                            _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha solicitado vacaciones las cuales ya han sido aprobas.</p>" +
-                                                    "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a esta dirección</p>" +
-                                                     "<p>Saludos,</p>";
-                            //+"<p>Saludos,</p>";
-                            _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+                            _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha solicitado vacaciones las cuales han sido rechazadas por su jefe inmediato.</p>" +
+                                                   "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a esta dirección</p>" +
+                                                    "<p>Saludos,</p>";
+
+                            foreach (var mail in correosRRHH)
+                            {
+                                _emailSendParams.Destinatarios.Add(mail);
+                            }
+                            //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
 
                             EnviarCorreo(_emailSendParams);
                         }
@@ -1298,14 +1444,18 @@ namespace RRHH_WEB_API.Features.Solicitud
                             _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha solicitado vacaciones las cuales ya han sido aprobadas.</p>" +
                                                     "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a esta dirección</p>" +
                                                      "<p>Saludos,</p>";
-                            //+"<p>Saludos,</p>";
-                            _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+
+                            foreach (var mail in correosRRHH)
+                            {
+                                _emailSendParams.Destinatarios.Add(mail);
+                            }
+                            //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
 
                             EnviarCorreo(_emailSendParams);
                         }
                         break;
 
-                    case 7://Es Rechazada por Jefe Inmediato
+                    case 7://Es Rechazada por RRHH
                         if (!string.IsNullOrEmpty(mailSolicitante))
                         {
 
@@ -1313,8 +1463,7 @@ namespace RRHH_WEB_API.Features.Solicitud
 
                             _emailSendParams.Subject = "Su solicitud de vacaciones ha cambiado de estado";
                             _emailSendParams.Body = "<p>Estimado(a) " + nameSolicitante + ", reciba un cordial saludo,</p>" +
-                                                    "<p>Le notificamos que su jefe inmediato <strong>" + nameJefeInmediato + "</strong> ha rechazado su solicitud vacaciones<p>" +
-                                                    //"<p>Le estaremos informando una vez haya sido procesada<p>" +
+                                                    "<p>Le notificamos que RRHH <strong> RRHH </strong> ha rechazado su solicitud vacaciones<p>" +
                                                     "<p>Saludos,<p>";
                             _emailSendParams.Destinatarios.Add(mailSolicitante);
 
@@ -1325,63 +1474,26 @@ namespace RRHH_WEB_API.Features.Solicitud
                             _emailSendParams.Destinatarios = new List<string>();
 
                             _emailSendParams.Subject = "Su solicitud de vacaciones ha cambiado de estado";
-                            _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha solicitado vacaciones las cuales han sido rechazadas por su jefe inmediato.</p>" +
+                            _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha solicitado vacaciones las cuales han sido rechazadas.</p>" +
                                                     "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a esta dirección</p>" +
                                                      "<p>Saludos,</p>";
-                            //+"<p>Saludos,</p>";
-                            _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
+
+                            foreach (var mail in correosRRHH)
+                            {
+                                _emailSendParams.Destinatarios.Add(mail);
+                            }
+                            //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
 
                             EnviarCorreo(_emailSendParams);
                         }
                         break;
                 }
-
-                //if (!string.IsNullOrEmpty(mailSolicitante))
-                //{
-
-                //    _emailSendParams.Destinatarios = new List<string>();
-
-                //    _emailSendParams.Subject = "Se ha creado una solicitud de Vacaciones";
-                //    _emailSendParams.Body = "<p>Estimado(a) " + nameSolicitante + ", reciba un cordial saludo,</p>" +
-                //                            "<p>Se ha creado una solicitud de vacaciones, se le estará notificando el avance del mismo<p>" +
-                //                            "<p>Saludos,<p>";
-                //    _emailSendParams.Destinatarios.Add(mailSolicitante);
-
-                //    EnviarCorreo(_emailSendParams);
-                //}
-                //else
-                //{
-                //    _emailSendParams.Destinatarios = new List<string>();
-
-                //    _emailSendParams.Subject = "Se ha creado una solicitud de Constancia";
-                //    _emailSendParams.Body = "<p>Srs(as) de RRHH, <strong>" + nameSolicitante + "</strong> ha creado una solicitud de Vacaciones.</p>" +
-                //                            "<p>Sin embargo no tiene configurada una dirección de correo, por tanto se ha redirigido el correo a este dirección</p>" +
-                //                             "<p>Saludos,</p>";
-                //    //+"<p>Saludos,</p>";
-                //    _emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
-
-                //    EnviarCorreo(_emailSendParams);
-                //}
-
-
-                //if (!string.IsNullOrEmpty(mailJefeInmediato))
-                //{
-
-                //    //Correo a RRHH
-                //    _emailSendParams.Subject = "Se ha creado una solicitud de Constancia";
-                //    _emailSendParams.Body = "<p>Estimado(a) <strong>" + nameJefeInmediato + "</strong>, " + nameSolicitante + " ha creado una solicitud de vacaciones,</p>" +
-                //                            "<p>Usted puede acceder al portal de <a href='http://10.50.11.32:82/#/auth/login'>Stand RRHH<a> para poder gestionar su solicitud</p>" +
-                //                            "<p>Saludos,</p>";
-                //    _emailSendParams.Destinatarios = new List<string> { mailJefeInmediato };
-                //    EnviarCorreo(_emailSendParams);
-                //}
-
-
+  
                 return ObtenerSolicitudesDeVacacionPorEstadoId(empleadoId);
             }
             catch (Exception e)
             {
-                rrhh_Web_DBContext.Database.RollbackTransaction();
+                _acs_DBContext.Database.RollbackTransaction();
                 return Response<List<SolicitudVacacionDto>>.Excepcion(e.Message);
             }
         }
@@ -1393,33 +1505,40 @@ namespace RRHH_WEB_API.Features.Solicitud
                 DateTimeFormatInfo spanishformat = new CultureInfo("es-ES", false).DateTimeFormat;
                 spanishformat.LongDatePattern = "dddd, dd 'de' MMMM 'del' yyyy";
                 string format = "dddd, dd 'de' MMMM 'del' yyyy";
+
                 ConvertirNumeroALetras numeroALetras = new ConvertirNumeroALetras();
+
+                var vacaciones = _requestVacacionInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == solicitudVacacionId);
+
+                var empleado = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == vacaciones.EmployeeId);
+
+                var job = _JobInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == empleado.JobId);
+                var departamento = _departmentInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == empleado.DepartmentId);
+                var contrato = _contractInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.EmployeeId == empleado.Id);
 
                 VacacionDto vacacion = _requestVacacionInstance.AsQueryable().AsNoTracking()
                     .Where(y => y.Id == solicitudVacacionId)
                     .Select(x => new VacacionDto
                     {
-                        EmployeeId = x.EmployeeId,
-                        Barcode = x.Employee.BarCode,
-                        Employee = x.Employee.Name,
-                        Job = x.Employee.Job.Name,
-                        Department = x.Employee.Department.Name,
-                        FechaIngreso = x.Employee.Contract.DateStart.ToString(format, new CultureInfo("es-ES")),
+                        EmployeeId = empleado.Id,
+                        Barcode = empleado.BarCode,
+                        Employee = empleado.Name,
+                        Job = job.Name,
+                        Department = departamento.Name,
+                        FechaIngreso = contrato.DateStart.Value.ToString(format, new CultureInfo("es-ES")),
                         CantidadDiasVacacion = x.CantidadDiasVacacion,
-                        CantidadDiasVacacionEnLetras =  x.CantidadDiasVacacion==1? numeroALetras.NumeroALetras(Convert.ToInt32(x.CantidadDiasVacacion))+" día": numeroALetras.NumeroALetras(Convert.ToInt32(x.CantidadDiasVacacion)) + " días",
-                        //FechaInicio = x.FechaInicio.ToString(format, new CultureInfo("es-ES")),
+                        CantidadDiasVacacionEnLetras = x.CantidadDiasVacacion == 1 ? numeroALetras.NumeroALetras(Convert.ToInt32(x.CantidadDiasVacacion)) + " día" : numeroALetras.NumeroALetras(Convert.ToInt32(x.CantidadDiasVacacion)) + " días",
                         FechaInicio = x.FechaInicio.ToString("dd/MM/yyyy"),
-                        //FechaFin = x.FechaFin.ToString(format, new CultureInfo("es-ES")),
                         FechaFin = x.FechaFin.ToString("dd/MM/yyyy"),
                         Observaciones = x.Observaciones,
                         CubreVacaciones = x.CubreVacaciones,
-                        //FechaReintegro = x.FechaReintegro.ToString(format, new CultureInfo("es-ES")),
                         FechaReintegro = x.FechaReintegro.ToString("dd/MM/yyyy"),
                         JefeInmediatoId = x.JefeInmediatoId,
                         TipoVacacionId = x.TipoVacacionId,
-                        TipoVacacionName="",
+                        TipoVacacionName = "",
                         ActividadesPendientes = x.ActividadesPendientes
                     }).FirstOrDefault();
+
                 //vacacion.Observaciones = "is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry'sss";
                 //Convert.ToDateTime(x.FechaInicio, spanishformat).ToLongDateString()
                 if (vacacion.JefeInmediatoId > 0)

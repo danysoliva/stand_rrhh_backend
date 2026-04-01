@@ -36,8 +36,7 @@ namespace RRHH_WEB_API.Features.Upload
         public Response<bool> SaveFiles(List<IFormFile> archivos,string host)
         {
             string pathFileDestiny = $"/upload/";
-            //string host = "http://10.50.11.32:8091";
-            //string host = "http://localhost:10178";
+     
             string pathServerUpload = $"{_enviroment.ContentRootPath}\\wwwroot\\upload\\";
             string fileName;
 
@@ -199,8 +198,7 @@ namespace RRHH_WEB_API.Features.Upload
         public Response<bool> GuardarDocumento(int tipo, List<IFormFile> archivos, string host, int id_grupo)
         {
             string pathFileDestiny = $"/formatos/";
-            //string host = "http://10.50.11.32:8091";
-            //string host = "http://localhost:10178";
+ 
             string pathServerUpload = $"{_enviroment.ContentRootPath}\\wwwroot\\formatos\\";
             string fileName;
 
@@ -290,7 +288,13 @@ namespace RRHH_WEB_API.Features.Upload
 
                 var grupos = _repositoryGroupInstance.AsQueryable().AsNoTracking().ToList();
 
-                var documentosFinales= documentos
+                List<RepositorioDocumentoDto> documentosFinales = new List<RepositorioDocumentoDto>();
+
+
+                if (tipo==1)
+                {
+
+                 documentosFinales= documentos.AsQueryable().Include(d=> grupos)
                     .Select(f=> new RepositorioDocumentoDto
                                 {
                                     Id = f.Id,
@@ -299,9 +303,29 @@ namespace RRHH_WEB_API.Features.Upload
                                     Host = f.Host,
                                     ReferenceFileName = f.ReferenceFileName,
                                     FullPath = f.Host + f.Path,
-                                    GrupoId = Convert.ToInt32(f.GrupoID == null ? 0 : f.GrupoID),
-                                    GrupoDocumento = grupos.FirstOrDefault(m => m.Id == f.GrupoID).Descripcion == null ? "No Definido" : grupos.FirstOrDefault(m => m.Id == f.GrupoID).Descripcion
+                        GrupoId =f.GrupoID,
+                        GrupoDocumento = grupos.FirstOrDefault(m => m.Id == f.GrupoID).Descripcion
                     }).ToList();
+                }
+
+
+                if (tipo==2)
+                {
+                    documentosFinales = documentos
+                   .Select(f => new RepositorioDocumentoDto
+                   {
+                       Id = f.Id,
+                       FileName = f.FileName,
+                       Path = f.Path,
+                       Host = f.Host,
+                       ReferenceFileName = f.ReferenceFileName,
+                       FullPath = f.Host + f.Path,
+                       //GrupoId = f.GrupoID == null ? 0 : f.GrupoID,
+                       //GrupoDocumento = grupos.FirstOrDefault(m => m.Id == f.GrupoID).Descripcion == null ? "No Definido" : grupos.FirstOrDefault(m => m.Id == f.GrupoID).Descripcion
+                   }).ToList();
+                }
+
+
 
 
                 //var documentos = (from doctos in _repositoryDocumento

@@ -20,6 +20,7 @@ namespace RRHH_WEB_API._Infraestructura
         public DbSet<Employee> Employee { get; set; }
         public DbSet<Department> Department { get; set; }       
         public DbSet<Contract> Contract { get; set; }
+        public DbSet<Job> Job { get; set; }
         public DbSet<PayslipRun> PayslipRun { get; set; }
         public DbSet<PayslipLine> PayslipLine { get; set; }
         public DbSet<Payslip> Payslip { get; set; }
@@ -27,6 +28,7 @@ namespace RRHH_WEB_API._Infraestructura
         public DbSet<BenefitDeduction>  BenefitDeduction { get; set; }
         public DbSet<Concept> Concepts { get; set; }        
         public DbSet<ResourceResource> ResourceResource { get; set; }
+        public DbSet<EmailNotificacionConfig> EmailNotificacionConfig { get; set; }
         public DbSet<Leave> Leave { get; set; }
         public DbSet<Deducciones> Deductions { get; set; }
         public DbSet<BenefitsVoucher> BeneficioVoucher { get; set; }
@@ -68,7 +70,6 @@ namespace RRHH_WEB_API._Infraestructura
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             new EmployeeMap(modelBuilder.Entity<Employee>());
-            //modelBuilder.Entity<Employee>().ToTable("hr_employee", "dbo");
             new DepartmentMap(modelBuilder.Entity<Department>());
             new JobMap(modelBuilder.Entity<Job>());           
             new ContractMap(modelBuilder.Entity<Contract>());
@@ -82,7 +83,12 @@ namespace RRHH_WEB_API._Infraestructura
             new LeaveMap(modelBuilder.Entity<Leave>());            
             new UserRefreshTokenMap(modelBuilder.Entity<UserRefreshToken>());
             new EmployeePictureMap(modelBuilder.Entity<EmployeePicture>());
+            new JobMap(modelBuilder.Entity<Job>());
 
+            modelBuilder.Entity<EmailNotificacionConfig>().ToTable("email_notifications_config", "dbo");
+
+            modelBuilder.Entity<EmailNotificacionConfig>()
+           .HasNoKey();
 
             modelBuilder.Entity<BenefitsVoucher>()
             .HasNoKey();

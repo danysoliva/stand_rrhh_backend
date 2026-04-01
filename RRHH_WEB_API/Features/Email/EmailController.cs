@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using RRHH_WEB_API._Common;
 using RRHH_WEB_API.Features.Email.Dto;
+using System;
 
 namespace RRHH_WEB_API.Features.Email
 {
@@ -33,6 +34,25 @@ namespace RRHH_WEB_API.Features.Email
 
             var response = _emailService.EnviarDetalleHorasPorEmpleado(enviarDetalleHorasParamsDto);
             return this.ActionResultFrom(response);
+        }
+
+        [HttpPost("imprimirDetalleHoras")]
+        [Authorize]
+        public IActionResult ImprimirDetalleHoras([FromBody] EnviarDetalleHorasParamsDto enviarDetalleHorasParamsDto)
+        {
+            IActionResult userResponse = this.GetClaim("EmpleadoId", out int employeeId);
+            if (employeeId == 0) return userResponse;
+
+            enviarDetalleHorasParamsDto.EmployeeId = employeeId;
+
+            var response = _emailService.GetPdfDetalleHorasBytes(enviarDetalleHorasParamsDto);
+
+            if (!response.Ok)
+            {
+                return this.ActionResultFrom(response);
+            }
+
+            return File(response.Data, "application/pdf", $"DetalleHoras_{System.DateTime.Now:ddMMyyyy}.pdf");
         }
 
 

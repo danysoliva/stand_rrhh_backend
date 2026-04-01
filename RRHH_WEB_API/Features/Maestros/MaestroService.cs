@@ -379,7 +379,6 @@ namespace RRHH_WEB_API.Features.Maestros
                                 CodeRelated= p.Payslip.PayslipLine.Code== "BASE_EX" || p.Payslip.PayslipLine.Code == "TPHE" ? p.Payslip.PayslipLine.Code: "P" + p.Payslip.PayslipLine.Code.Replace("_","") ,
                                 Detalle = p.Payslip.PayslipLine.Name,
                                 CantidadHoras = cantidadHoras.Contains(p.Payslip.PayslipLine.SalaryRuleId)==true?(decimal)p.Payslip.PayslipLine.Amount:0,
-                                //TotalLinea = TotalLineas.Contains(p.Payslip.PayslipLine.SalaryRuleId)==true?(decimal)p.Payslip.PayslipLine.Amount:0
                             }).ToList();
 
 
