@@ -8,6 +8,8 @@ using RRHH_WEB_API._Infraestructura.Map.Encuesta;
 using RRHH_WEB_API._Infraestructura.Map.QuejasSugerenciasDenuncias;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using static RRHH_WEB_API._Infraestructura.RRHH_DBContext;
 
 namespace RRHH_WEB_API._Infraestructura
 {
@@ -50,6 +52,8 @@ namespace RRHH_WEB_API._Infraestructura
         public DbSet<RequestConstanciaItem> RequestConstanciaItem { get; set; }
         public DbSet<TipoVacacion> TipoVacaciones { get; set; }
         public DbSet<RepositoryGroup> RepositoryGroups { get; set; }
+        public DbSet<SolicitudVacacionEmpleadoDto> SolicitudVacacionEmpleado { get; set; }
+
 
         public class HorasTrabajadasEmpleado
         {
@@ -65,6 +69,19 @@ namespace RRHH_WEB_API._Infraestructura
             public DateTime Fecha { get; set; }
             public string? Departamento { get; set; }
             public int? Semana { get; set; }
+        }
+
+        public class SolicitudVacacionEmpleadoDto
+        {
+            //[Key]
+            [NotMapped]
+            public int? SolicitudId { get; set; }
+            public int? EmployeeId { get; set; }
+            public string EmployeeName { get; set; }
+            public string EmployeeBarCode { get; set; }
+            public string EmployeeJobName { get; set; }
+            public string EmployeeDepartmentName { get; set; }
+ 
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -115,7 +132,7 @@ namespace RRHH_WEB_API._Infraestructura
             new FeriadoMap(modelBuilder.Entity<Feriado>());
             new UserLevelMap(modelBuilder.Entity<UserLevel>());
 
-
+            modelBuilder.Entity<SolicitudVacacionEmpleadoDto>().HasNoKey();
             //modelBuilder.Entity<RequestConstancia>().ToTable("request_constancia", "rrhh_web");
 
         }

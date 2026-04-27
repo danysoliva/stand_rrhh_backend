@@ -301,7 +301,7 @@ namespace RRHH_WEB_API.Features.Maestros
 
                     //Resumen
                     TotalEgresos = detalleSalario.Where(y => y.Code == "TEGRESO").FirstOrDefault().Amount.GetValueOrDefault(),
-                   SalarioNeto = detalleSalario.Where(y => y.Code == "NET").FirstOrDefault().Amount.GetValueOrDefault(),
+                    SalarioNeto = detalleSalario.Where(y => y.Code == "NET").FirstOrDefault().Amount.GetValueOrDefault(),
                     TotalIngresos = detalleSalario.Where(y => y.Code == "GROSS").FirstOrDefault().Amount.GetValueOrDefault()
                 };
 
@@ -341,7 +341,9 @@ namespace RRHH_WEB_API.Features.Maestros
                     voucher.Deducciones = deducciones;
                     voucher.Beneficios = beneficios;
 
-                //voucher.TotalIngresos=voucher.SalarioBase+voucher.Bono+voucher.Vacaciones;
+                    voucher.TotalEgresos= deducciones.Where(d=> d.Code!= "GROSS").Sum(d => d.Monto);
+
+                    //voucher.TotalIngresos=voucher.SalarioBase+voucher.Bono+voucher.Vacaciones;
                 }
 
                 voucherResponse.PayRolTypeId = payRollType;

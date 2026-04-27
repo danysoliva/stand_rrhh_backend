@@ -7,7 +7,7 @@ namespace RRHH_WEB_API._Entidades
     {
         public int Id { get; set; }
         public int EmployeeId { get; set; }
-        public Employee Employee { get; set; }
+        //public Employee Employee { get; set; }
         public DateTime FechaInicio { get; set; }
         public DateTime FechaFin { get; set; }
         public DateTime FechaReintegro { get; set; }
@@ -21,8 +21,8 @@ namespace RRHH_WEB_API._Entidades
         public RequestState RequestState { get; set; }
         public bool Enable { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.Now;
-        public int TipoVacacionId { get; set; }
-        public string ActividadesPendientes { get; set; } = string.Empty;
+        public int? TipoVacacionId { get; set; }
+        public string? ActividadesPendientes { get; set; } = string.Empty;
         public List<RequestVacacionTracking> RequestVacacionesTracking { get; set; }
     }
 }

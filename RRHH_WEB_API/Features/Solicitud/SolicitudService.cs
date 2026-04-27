@@ -4,6 +4,7 @@ using RRHH_WEB_API._Common;
 using RRHH_WEB_API._Entidades;
 
 using RRHH_WEB_API._Infraestructura;
+using RRHH_WEB_API.Features.Maestros.Dtos;
 using RRHH_WEB_API.Features.Solicitud.Clases;
 using RRHH_WEB_API.Features.Solicitud.Dtos;
 using System;
@@ -12,6 +13,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+ 
 
 namespace RRHH_WEB_API.Features.Solicitud
 {
@@ -340,16 +342,38 @@ namespace RRHH_WEB_API.Features.Solicitud
                 //    }
                 //}
 
-                string sql = "EXEC dbo.usp_GetDeductions @employee_id ="+employeeId;
+                //string sql = "EXEC dbo.usp_GetDeductions @employee_id ="+employeeId;
 
-                var deductions = rrhh_Web_DBContext.Deductions
-                .FromSqlRaw(sql) .ToList().Select(x=> new ConstanciaTrabajoIngresoDeduccionDto { 
-                    Id=x.Id,
-                    Nombre=x.Nombre,
-                    Monto=  x.Monto
-                });
+                //var deductions = rrhh_Web_DBContext.Deductions
+                //.FromSqlRaw("EXEC dbo.usp_GetDeductions @employee_id = {0}", employeeId)
+                //.AsNoTracking()
+                //.ToList()
+                //.Select(x => new ConstanciaTrabajoIngresoDeduccionDto
+                //{
+                //    Id = x.Id,
+                //    Nombre = x.Nombre,
+                //    Monto = x.Monto,
+                //    type_ = 2,
+                //
+                //   type_name = "Deducción"
+                //});
 
-                return deductions.ToList();
+                var conceptos_seleccionados = _requestConstanciaItemInstance.AsQueryable().AsNoTracking()
+                    .Where(r => r.RequestConstanciaId == solicitudConstanciaId && r.RequestItemId != depreciacionConceptoId)
+                    .Select(r => r.RequestItemId).ToList();
+
+                var deductions = rrhh_Web_DBContext.DeduccionForConstancia
+                 .FromSqlRaw("EXEC dbo.usp_GetDeductions @employee_id = {0}", employeeId)
+                 .ToList()
+                 .Select(x => new ConstanciaTrabajoIngresoDeduccionDto
+                 {
+                     Id = x.Id,
+                     Nombre = x.Nombre,
+                     Monto = x.Monto
+                 })
+                 .ToList();
+
+                return deductions.Where(d => conceptos_seleccionados.Contains(d.Id)). ToList();
             }
             catch (Exception ex)
             {
@@ -491,7 +515,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                     }
 
                     //_emailSendParams.Destinatarios.Add(_emailConfiguration.RRHHEmail);
-               
+
 
                     EnviarCorreo(_emailSendParams);
                 }
@@ -756,7 +780,9 @@ namespace RRHH_WEB_API.Features.Solicitud
                 constanciaTrabajo.Ingresos.Add(ObtenerOtrosIngresos(empleadoIdConstancia, tasa));
 
 
-                RequestConstanciaItem depreciacionItem = _requestConstanciaItemInstance.AsQueryable().AsNoTracking().FirstOrDefault(r => r.RequestConstanciaId == solicitudConstanciaId && r.RequestItemId == depreciacionConceptoId);
+                RequestConstanciaItem depreciacionItem = _requestConstanciaItemInstance.AsQueryable().AsNoTracking()
+                                                        .FirstOrDefault(r => r.RequestConstanciaId == solicitudConstanciaId 
+                                                        && r.RequestItemId == depreciacionConceptoId);
                 if (depreciacionItem.IsNotNull())
                 {
                     ConstanciaTrabajoIngresoDeduccionDto depreciacionIngreso = new ConstanciaTrabajoIngresoDeduccionDto
@@ -1508,23 +1534,42 @@ namespace RRHH_WEB_API.Features.Solicitud
 
                 ConvertirNumeroALetras numeroALetras = new ConvertirNumeroALetras();
 
-                var vacaciones = _requestVacacionInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == solicitudVacacionId);
+                string sql2 = $"EXEC dbo.uspObtenerSolicitudEmpleado @solicitud_id= {solicitudVacacionId}";
 
-                var empleado = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == vacaciones.EmployeeId);
+                var solicitud = _acs_DBContext.SolicitudVacacionEmpleado
+                .FromSqlRaw(sql2).ToList().FirstOrDefault();
+                //.Select(x => new solicitudvac
+                //{
+                //    Id = x.SolicitudId,
+                //     EmployeeId = x.EmpoyeeId,
+                //        Employee = x.EmpoyeeName
+                //}).ToList();
 
-                var job = _JobInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == empleado.JobId);
-                var departamento = _departmentInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == empleado.DepartmentId);
-                var contrato = _contractInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.EmployeeId == empleado.Id);
+
+                //var employee_id = _requestVacacionInstance
+                //                .AsQueryable()
+                //                .AsNoTracking().ToList();
+                //                //.FirstOrDefault(x => x.Id == solicitudVacacionId).EmployeeId;
+                //                 //Select(x => x.Employee).FirstOrDefault();
+
+                //var vacaciones = _requestVacacionInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == solicitudVacacionId);
+
+                //var empleado = _employeeInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == vacaciones.EmployeeId);
+
+                //var job = _JobInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == empleado.JobId);
+                //var departamento = _departmentInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.Id == empleado.DepartmentId);
+
+                var contrato = _contractInstance.AsQueryable().AsNoTracking().FirstOrDefault(x => x.EmployeeId == solicitud.EmployeeId);
 
                 VacacionDto vacacion = _requestVacacionInstance.AsQueryable().AsNoTracking()
                     .Where(y => y.Id == solicitudVacacionId)
                     .Select(x => new VacacionDto
                     {
-                        EmployeeId = empleado.Id,
-                        Barcode = empleado.BarCode,
-                        Employee = empleado.Name,
-                        Job = job.Name,
-                        Department = departamento.Name,
+                        EmployeeId = solicitud.EmployeeId ?? 0,
+                        Barcode = solicitud.EmployeeBarCode,
+                        Employee = solicitud.EmployeeName,
+                        Job = solicitud.EmployeeJobName,
+                        Department = solicitud.EmployeeDepartmentName,
                         FechaIngreso = contrato.DateStart.Value.ToString(format, new CultureInfo("es-ES")),
                         CantidadDiasVacacion = x.CantidadDiasVacacion,
                         CantidadDiasVacacionEnLetras = x.CantidadDiasVacacion == 1 ? numeroALetras.NumeroALetras(Convert.ToInt32(x.CantidadDiasVacacion)) + " día" : numeroALetras.NumeroALetras(Convert.ToInt32(x.CantidadDiasVacacion)) + " días",
@@ -1534,7 +1579,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                         CubreVacaciones = x.CubreVacaciones,
                         FechaReintegro = x.FechaReintegro.ToString("dd/MM/yyyy"),
                         JefeInmediatoId = x.JefeInmediatoId,
-                        TipoVacacionId = x.TipoVacacionId,
+                        TipoVacacionId = x.TipoVacacionId ?? 0,
                         TipoVacacionName = "",
                         ActividadesPendientes = x.ActividadesPendientes
                     }).FirstOrDefault();

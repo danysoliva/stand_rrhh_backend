@@ -36,6 +36,7 @@ namespace RRHH_WEB_API._Infraestructura
         public DbSet<EmployeePicture> EmployeePicture { get; set; }
        
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
+        public DbSet<DeductionForConstancia> DeduccionForConstancia { get; set; }
 
         public class Deducciones
         {
@@ -67,6 +68,17 @@ namespace RRHH_WEB_API._Infraestructura
             public string Code { get; set; }
         }
 
+        public class DeductionForConstancia
+        {
+
+            public int Id { get; set; }
+            public string Nombre { get; set; }
+            public decimal Monto { get; set; }
+            public int type_ { get; set; }
+            public string type_name { get; set; }
+        }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             new EmployeeMap(modelBuilder.Entity<Employee>());
@@ -95,6 +107,8 @@ namespace RRHH_WEB_API._Infraestructura
 
             modelBuilder.Entity<DeductionVoucher>()
             .HasNoKey();
+
+            modelBuilder.Entity<DeductionForConstancia>().HasNoKey();
         }
     }
 }

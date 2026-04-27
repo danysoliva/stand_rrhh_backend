@@ -32,6 +32,7 @@ namespace RRHH_WEB_API.Features.Solicitud.Dtos
         public int Id { get; set; }
         public string Nombre { get; set; }
         public decimal Monto { get; set; }
+ 
     }
 
 

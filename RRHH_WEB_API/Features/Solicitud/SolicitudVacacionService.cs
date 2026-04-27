@@ -17,11 +17,12 @@ namespace RRHH_WEB_API.Features.Solicitud
 {
     public class SolicitudVacacionService
     {
-        private readonly RRHH_DBContext _dbContext;
+        private readonly RRHH_DBContext _rrhh_dbContext;
         private readonly ACS_DBContext _acs_dbContext;
 
         private readonly SolicitudService _solicitudService;
         private readonly DbSet< RequestVacacion> _solicitudVacaciones;
+        private readonly DbSet< Employee> _empleados;
         private const decimal medioDia = (decimal)0.5;
         private const decimal diaCompleto = 1;
 
@@ -29,11 +30,13 @@ namespace RRHH_WEB_API.Features.Solicitud
 
         public SolicitudVacacionService(RRHH_DBContext rrhh_DBContext, SolicitudService solicitudService, ACS_DBContext acs_DBCotext)
         {
-            _dbContext = rrhh_DBContext;
+            _rrhh_dbContext = rrhh_DBContext;
             _acs_dbContext = acs_DBCotext;
 
             _solicitudService = solicitudService;
+
             _solicitudVacaciones = _acs_dbContext.RequestVacacion;
+            _empleados = _rrhh_dbContext.Employee;
         }
 
         private ValidarVacacionDto InicializarVacacion(ValidarVacacionDto validarVacacion, List<Feriado> feriadosDelAnioActual)
@@ -264,14 +267,14 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                Employee empleado = _dbContext.Employee.AsQueryable().AsNoTracking().Where(m => m.Id == empleadoId).Include(x => x.Parent).FirstOrDefault();
+                Employee empleado = _rrhh_dbContext.Employee.AsQueryable().AsNoTracking().Where(m => m.Id == empleadoId).Include(x => x.Parent).FirstOrDefault();
 
                 List<SolicitudVacacionDto> solicitudes = _solicitudVacaciones.AsQueryable().AsNoTracking().Where(y => y.Enable == true && y.EmployeeId == empleadoId)
                     .Select(x => new SolicitudVacacionDto
                     {
                         Id = x.Id,
                         EmployeeId = x.EmployeeId,
-                        Employee = x.Employee.Name,
+                        Employee = empleado.Name,
                         RequestStateId = x.RequestStateId,
                         RequestState = x.RequestState.Name,
                         FechaInicio = x.FechaInicio,
@@ -297,9 +300,9 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                _dbContext.Database.BeginTransaction();
+                _rrhh_dbContext.Database.BeginTransaction();
 
-                Employee empleado = _dbContext.Employee.AsQueryable().AsNoTracking().Where(m => m.Id == empleadoId).Include(x => x.Parent).FirstOrDefault();
+                Employee empleado = _rrhh_dbContext.Employee.AsQueryable().AsNoTracking().Where(m => m.Id == empleadoId).Include(x => x.Parent).FirstOrDefault();
 
                 if (empleado.Parent == null)
                 {
@@ -346,7 +349,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             }
             catch (Exception e)
             {
-                _dbContext.Database.RollbackTransaction();
+                _rrhh_dbContext.Database.RollbackTransaction();
                 return Response<List<SolicitudVacacionDto>>.Excepcion(e.Message);
             }
         }
@@ -372,8 +375,10 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
+
+
                 List<RequestVacacion> solicitudesDeVacaciones = _acs_dbContext.RequestVacacion.AsQueryable().AsNoTracking()
-                    .Include(x => x.Employee).ThenInclude(x => x.Parent)
+                    //.Include(x => x.Employee).ThenInclude(x => x.Parent)
                     .Include(x => x.RequestState)
                     .Where(x => x.Enable).ToList();
 
@@ -383,7 +388,8 @@ namespace RRHH_WEB_API.Features.Solicitud
                     solicitudesDeVacaciones = solicitudesDeVacaciones.Where(x => x.RequestStateId == estadoId).ToList();
                 }
 
-                Employee empleado = _dbContext.Employee.AsQueryable().AsNoTracking().Include(x => x.UserDelegation).FirstOrDefault(x => x.Id == empleadoId);
+                Employee empleado = _rrhh_dbContext.Employee.AsQueryable().AsNoTracking().Include(x => x.UserDelegation).FirstOrDefault(x => x.Id == empleadoId);
+               
                 List<int> empleadosACargo = _solicitudService.ObtenerEmpleadosACargo(empleadoId);
                 if (empleado.EsEmpleadoNormal())
                 {
@@ -395,7 +401,7 @@ namespace RRHH_WEB_API.Features.Solicitud
                     {
                         Id = x.Id,
                         EmployeeId = x.EmployeeId,
-                        Employee = x.Employee.Name,
+                        Employee = _empleados.AsQueryable().AsNoTracking().FirstOrDefault (f=>f.Id ==x.EmployeeId).Name,
                         RequestStateId = x.RequestStateId,
                         RequestState = x.RequestState.Name,
                         FechaInicio = x.FechaInicio,
@@ -406,8 +412,8 @@ namespace RRHH_WEB_API.Features.Solicitud
                         Observaciones = x.Observaciones,
                         CubreVacaciones = x.CubreVacaciones,
                         Comment = x.Comment,
-                        JefeInmediato = (x.Employee.Parent != null) ? x.Employee.Parent.Name : "",
-                        MailJefeInmediato = (x.Employee.Parent != null) ? x.Employee.Parent.WorkEmail : "",
+                        JefeInmediato = (_empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Parent != null) ? _empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Parent.Name : "",
+                        MailJefeInmediato = (_empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Parent != null) ? _empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Parent.WorkEmail : "",
                         EsVistaRRHHAdministrador = empleado.EsEmpleadoRRHHAdministrador(),
                         EsVistaJefatura = empleado.EsEmpleadoNormal(),
                     }).OrderByDescending(x => x.CreatedDate).ToList();
@@ -424,7 +430,7 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                _dbContext.Database.BeginTransaction();
+                _rrhh_dbContext.Database.BeginTransaction();
 
                 string estadoSolicitud = _acs_dbContext.RequestState.AsQueryable().AsNoTracking().Where(x => x.Id == cambioEstadoSolicitudDto.EstadoId).FirstOrDefault().Name;
 
@@ -448,7 +454,7 @@ namespace RRHH_WEB_API.Features.Solicitud
             }
             catch (Exception e)
             {
-                _dbContext.Database.RollbackTransaction();
+                _rrhh_dbContext.Database.RollbackTransaction();
                 return Response<List<SolicitudVacacionDto>>.Excepcion(e.Message);
             }
         }
@@ -457,7 +463,8 @@ namespace RRHH_WEB_API.Features.Solicitud
         {
             try
             {
-                Employee empleado = _dbContext.Employee.AsQueryable().AsNoTracking().Include(x => x.UserDelegation).FirstOrDefault(x => x.Id == empleadoId);
+                Employee empleado = _rrhh_dbContext.Employee.AsQueryable().AsNoTracking().Include(x => x.UserDelegation).FirstOrDefault(x => x.Id == empleadoId);
+                
                 if (!empleado.EsEmpleadoRRHHAdministrador())
                 {
                     return Response<VacacionDto>.Excepcion("No tiene permiso para imprimir");
@@ -472,10 +479,10 @@ namespace RRHH_WEB_API.Features.Solicitud
                     .Select(x => new VacacionDto
                     {
                         EmployeeId = x.Id,
-                        Employee = x.Employee.Name,
-                        Job = x.Employee.Job.Name,
-                        Department = x.Employee.Department.Name,
-                        FechaIngreso = x.Employee.Contract.DateStart.Value.ToString(format, new CultureInfo("es-ES")),
+                        Employee = _empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Name,
+                        Job = _empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Job.Name,
+                        Department = _empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Department.Name,
+                        FechaIngreso = _empleados.AsQueryable().AsNoTracking().FirstOrDefault(f => f.Id == x.EmployeeId).Contract.DateStart.Value.ToString(format, new CultureInfo("es-ES")),
                         CantidadDiasVacacion = x.CantidadDiasVacacion,
                         FechaInicio = x.FechaInicio.ToString(format, new CultureInfo("es-ES")),
                         FechaFin = x.FechaFin.ToString(format, new CultureInfo("es-ES")),
@@ -488,7 +495,7 @@ namespace RRHH_WEB_API.Features.Solicitud
 
                 if (vacacion.JefeInmediatoId > 0)
                 {
-                    vacacion.JefeInmediato = _dbContext.Employee.AsQueryable().FirstOrDefault(p => p.Id == vacacion.JefeInmediatoId).Name;
+                    vacacion.JefeInmediato = _rrhh_dbContext.Employee.AsQueryable().FirstOrDefault(p => p.Id == vacacion.JefeInmediatoId).Name;
                 }
 
                 return Response<VacacionDto>.Success(vacacion);
